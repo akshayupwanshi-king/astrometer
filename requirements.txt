@@ -1,6 +1,8 @@
 streamlit
+supabase
 requests
 pandas
 pytz
 timezonefinder
 astral
+python-dotenv
