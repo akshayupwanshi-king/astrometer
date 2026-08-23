@@ -23,33 +23,106 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ====================== AUTH HELPERS ======================
 
-def sign_up(email, password):
+def init_supabase():
+    return create_client(st.secrets["supabase"]["url"], st.secrets["supabase"]["key"])
+
+supabase = init_supabase()
+
+def sign_up(email: str, password: str):
     try:
         res = supabase.auth.sign_up({"email": email, "password": password})
         return res
     except Exception as e:
-        st.error(f"Signup failed: {e}")
+        st.error(f"Signup error: {str(e)}")
         return None
 
-def sign_in(email, password):
+def sign_in(email: str, password: str):
     try:
         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
         return res
     except Exception as e:
-        st.error(f"Login failed: {e}")
+        st.error(f"Login error: {str(e)}")
         return None
 
 def sign_out():
-    supabase.auth.sign_out()
-    st.session_state.clear()
+    try:
+        supabase.auth.sign_out()
+    except:
+        pass
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
     st.rerun()
 
-def get_current_user():
-    try:
-        return supabase.auth.get_user()
-    except:
-        return None
+# ====================== MAIN APP ======================
 
+st.title("🌠 AstroMeter Pro")
+
+# Initialize session state
+if "user" not in st.session_state:
+    st.session_state.user = None
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+# ---------- LOGIN / SIGNUP UI ----------
+if not st.session_state.logged_in:
+
+    tab1, tab2 = st.tabs(["Login", "Sign Up"])
+
+    with tab1:
+        st.subheader("Login to your account")
+        email = st.text_input("Email", key="login_email")
+        password = st.text_input("Password", type="password", key="login_password")
+
+        if st.button("Login", type="primary", use_container_width=True):
+            with st.spinner("Logging in..."):
+                res = sign_in(email, password)
+                if res and res.user:
+                    st.session_state.user = res.user
+                    st.session_state.logged_in = True
+                    st.success("Login successful!")
+                    time.sleep(0.8)
+                    st.rerun()
+                else:
+                    st.error("Invalid email or password")
+
+    with tab2:
+        st.subheader("Create a new account")
+        email = st.text_input("Email", key="signup_email")
+        password = st.text_input("Password", type="password", key="signup_password")
+        password2 = st.text_input("Confirm Password", type="password", key="signup_password2")
+
+        if st.button("Create Account", use_container_width=True):
+            if password != password2:
+                st.error("Passwords do not match")
+            elif len(password) < 6:
+                st.error("Password must be at least 6 characters")
+            else:
+                res = sign_up(email, password)
+                if res and res.user:
+                    st.success("Account created successfully! You can now login.")
+                    st.info("If email confirmation is enabled, please check your inbox.")
+                else:
+                    st.error("Could not create account. Email may already be registered.")
+
+# ---------- LOGGED IN UI ----------
+else:
+    user = st.session_state.user
+
+    # Sidebar
+    with st.sidebar:
+        st.success(f"Logged in as:\n**{user.email}**")
+        st.markdown("---")
+        if st.button("Logout", use_container_width=True):
+            sign_out()
+
+    st.header("Welcome to AstroMeter Pro")
+    st.write("You are successfully logged in.")
+
+    # ---- Your main app content starts here ----
+    st.info("Main application content will appear here (Birth Profiles, Calculate Luck, etc.)")
+
+    # Temporary test
+    st.write("User ID:", user.id)
 # ====================== DATABASE HELPERS ======================
 
 def get_user_profiles(user_id):
