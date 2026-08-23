@@ -373,14 +373,6 @@ else:
                 with col2:
                     st.subheader("Current Transit")
                     st.dataframe(transit_df, use_container_width=True)
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.subheader("Natal Chart")
-                    st.dataframe(natal_df, use_container_width=True)
-                with col2:
-                    st.subheader("Current Transit")
-                    st.dataframe(transit_df, use_container_width=True)
 
             except Exception as e:
                 st.error(f"Error during calculation: {str(e)}")
