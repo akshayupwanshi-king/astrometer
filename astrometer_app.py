@@ -341,7 +341,7 @@ else:
                         current_maha = info["Lord"]
                         break
 
-                                st.success(f"**Current Maha-Dasha:** {current_maha}")
+                st.success(f"**Current Maha-Dasha:** {current_maha}")
 
                 # ---- Luck Meter ----
                 score, jup_h, ven_h, moon_h = calculate_luck_score(natal_df, transit_df, current_maha)
