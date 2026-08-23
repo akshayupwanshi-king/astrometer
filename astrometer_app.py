@@ -150,6 +150,50 @@ def planets_to_df(data):
         })
     return pd.DataFrame(rows)
 
+signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
+         'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
+
+good_houses = {1: 30, 5: 20, 9: 20, 2: 10, 4: 10, 7: 10, 11: 10}
+
+def get_house_from_sign(curr_sign, ref_sign):
+    try:
+        return (signs.index(curr_sign) - signs.index(ref_sign)) % 12 + 1
+    except:
+        return 6
+
+def calculate_luck_score(natal_df, transit_df, current_maha):
+    try:
+        moon_sign = natal_df[natal_df['Planet'] == 'Moon']['Zodiac_Sign'].values[0]
+        asc_sign  = natal_df[natal_df['Planet'] == 'Ascendant']['Zodiac_Sign'].values[0]
+
+        # Jupiter
+        jup_sign = transit_df[transit_df['Planet'] == 'Jupiter']['Zodiac_Sign'].values[0]
+        jup_h = get_house_from_sign(jup_sign, moon_sign)
+        jup_score = good_houses.get(jup_h, 5)
+
+        # Venus
+        ven_sign = transit_df[transit_df['Planet'] == 'Venus']['Zodiac_Sign'].values[0]
+        ven_h = get_house_from_sign(ven_sign, moon_sign)
+        ven_score = good_houses.get(ven_h, 5)
+
+        # Moon
+        moon_sign_t = transit_df[transit_df['Planet'] == 'Moon']['Zodiac_Sign'].values[0]
+        moon_h = get_house_from_sign(moon_sign_t, asc_sign)
+        moon_score = good_houses.get(moon_h, 5)
+
+        # Saturn malefic
+        sat_sign = transit_df[transit_df['Planet'] == 'Saturn']['Zodiac_Sign'].values[0]
+        sat_h = get_house_from_sign(sat_sign, moon_sign)
+        malefic = -15 if sat_h in [1, 5, 9] else 0
+
+        # Dasha bonus
+        dasha_bonus = 18 if current_maha in ['Jupiter', 'Venus', 'Mercury', 'Moon'] else 8
+
+        total = min(max(jup_score + ven_score + moon_score + malefic + dasha_bonus, 5), 100)
+        return total, jup_h, ven_h, moon_h
+    except Exception as e:
+        return 40, 6, 6, 6
+
 # ====================== SESSION STATE ======================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -297,7 +341,38 @@ else:
                         current_maha = info["Lord"]
                         break
 
-                st.success(f"**Current Maha-Dasha:** {current_maha}")
+                                st.success(f"**Current Maha-Dasha:** {current_maha}")
+
+                # ---- Luck Meter ----
+                score, jup_h, ven_h, moon_h = calculate_luck_score(natal_df, transit_df, current_maha)
+
+                if score >= 67:
+                    zone = "🟢 High"
+                    color = "green"
+                    message = "Excellent time for important actions!"
+                elif score >= 34:
+                    zone = "🟡 Moderate"
+                    color = "orange"
+                    message = "Steady progress. Avoid major risks."
+                else:
+                    zone = "🔴 Low"
+                    color = "red"
+                    message = "Low energy period. Better to wait."
+
+                st.markdown(f"### Luck Score: **{score}/100**  —  {zone}")
+                st.progress(score / 100)
+                st.info(f"**{message}**")
+
+                st.caption(f"Jupiter in {jup_h}th from Moon • Venus in {ven_h}th from Moon • Moon in {moon_h}th from Ascendant")
+
+                # Charts
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.subheader("Natal Chart")
+                    st.dataframe(natal_df, use_container_width=True)
+                with col2:
+                    st.subheader("Current Transit")
+                    st.dataframe(transit_df, use_container_width=True)
                 
                 col1, col2 = st.columns(2)
                 with col1:
