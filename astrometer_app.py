@@ -115,9 +115,26 @@ def get_maha_dashas(year, month, day, hour, minute, second, lat, lon, tz_offset)
         "config": {"observation_point": "topocentric", "ayanamsha": "lahiri"}
     }
     headers = {"Content-Type": "application/json", "x-api-key": API_KEY}
-    r = requests.post(url, headers=headers, json=payload, timeout=20)
-    r.raise_for_status()
-    return json.loads(r.json().get("output", "{}"))
+
+    for attempt in range(4):
+        try:
+            r = requests.post(url, headers=headers, json=payload, timeout=25)
+            
+            if r.status_code == 429:
+                wait_time = (attempt + 1) * 10
+                st.warning(f"API rate limit hit. Waiting {wait_time} seconds... (try {attempt+1}/4)")
+                time.sleep(wait_time)
+                continue
+                
+            r.raise_for_status()
+            return json.loads(r.json().get("output", "{}"))
+            
+        except Exception as e:
+            if attempt == 3:
+                raise e
+            time.sleep(5)
+    
+    raise Exception("Failed to get Maha-Dasha after multiple retries due to rate limiting.")
 
 def planets_to_df(data):
     rows = []
