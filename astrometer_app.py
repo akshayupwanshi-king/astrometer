@@ -6,15 +6,6 @@ from supabase import create_client
 import streamlit.components.v1 as components
 import pandas as pd
 
-@st.cache_data
-def load_cities():
-    df = pd.read_csv("worldcities.csv")
-    df = df[["city_ascii", "lat", "lng", "country"]].dropna()
-    df["display"] = df["city_ascii"] + ", " + df["country"]
-    return df.reset_index(drop=True)
-
-cities_df = load_cities()
-
 from astro_engine import (
     get_timezone,
     get_planets_extended,
@@ -32,32 +23,17 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ====================== COSMIC THEME CSS ======================
+# ====================== COSMIC THEME ======================
 st.markdown("""
 <style>
-    /* Main background */
     .stApp {
         background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
         color: #E0E6F0;
     }
-
-    /* Headers */
     h1, h2, h3 {
         color: #E0D4FF !important;
         text-shadow: 0 0 12px rgba(180, 140, 255, 0.4);
     }
-
-    /* Cards */
-    .cosmic-card {
-        background: rgba(20, 25, 45, 0.75);
-        border: 1px solid rgba(140, 100, 255, 0.25);
-        border-radius: 16px;
-        padding: 24px;
-        backdrop-filter: blur(12px);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    }
-
-    /* Buttons */
     .stButton > button {
         background: linear-gradient(135deg, #6B4EFF, #9B6DFF);
         color: white;
@@ -70,23 +46,27 @@ st.markdown("""
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(107, 78, 255, 0.5);
     }
-
-    /* Sidebar */
     section[data-testid="stSidebar"] {
         background: rgba(10, 12, 25, 0.95);
         border-right: 1px solid rgba(140, 100, 255, 0.15);
     }
-
-    /* Metric / success boxes */
     .stSuccess, .stInfo {
         background: rgba(30, 20, 60, 0.6);
         border: 1px solid rgba(140, 100, 255, 0.3);
     }
-
-    /* Hide default footer */
     footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
+
+# ====================== LOAD CITIES ======================
+@st.cache_data
+def load_cities():
+    df = pd.read_csv("worldcities.csv")
+    df = df[["city_ascii", "lat", "lng", "country"]].dropna()
+    df["display"] = df["city_ascii"] + ", " + df["country"]
+    return df.reset_index(drop=True)
+
+cities_df = load_cities()
 
 # ====================== SECRETS ======================
 SUPABASE_URL = st.secrets["supabase"]["url"]
@@ -161,7 +141,7 @@ if "logged_in" not in st.session_state:
 if "user" not in st.session_state:
     st.session_state.user = None
 if "view" not in st.session_state:
-    st.session_state.view = "meter"          # "meter" or "charts"
+    st.session_state.view = "meter"
 if "last_result" not in st.session_state:
     st.session_state.last_result = None
 
@@ -217,13 +197,103 @@ else:
         if st.button("📜 Birth Charts", use_container_width=True):
             st.session_state.view = "charts"
             st.rerun()
-
         st.markdown("---")
         st.success(f"**{user.email}**")
         if st.button("Logout", use_container_width=True):
             sign_out()
 
-        # ====================== PROFILE SELECTION ======================
+    # ====================== METER AT THE TOP ======================
+    if st.session_state.last_result and st.session_state.view == "meter":
+        result = st.session_state.last_result
+        score = result["score"]
+        current_maha = result["current_maha"]
+
+        if score >= 67:
+            zone, zone_color, message = "High", "#00E676", "The cosmos favors bold action"
+        elif score >= 34:
+            zone, zone_color, message = "Moderate", "#FFD600", "Steady energy — move with care"
+        else:
+            zone, zone_color, message = "Low", "#FF1744", "The stars advise patience"
+
+        final_angle = (score / 100) * 180
+
+        meter_html = f"""
+        <div style="display:flex; flex-direction:column; align-items:center; padding: 5px 0 15px 0; font-family: 'Segoe UI', system-ui, sans-serif;">
+          
+          <div style="font-size:13px; color:#A78BFA; letter-spacing:3px; margin-bottom:6px; opacity:0.9;">
+            CURRENT MAHA-DASHA • {current_maha.upper()}
+          </div>
+
+          <div style="position:relative; width:320px; height:180px;">
+            <svg width="320" height="180" viewBox="0 0 320 180">
+              <path d="M 30 160 A 130 130 0 0 1 290 160" fill="none" stroke="#2A2A3A" stroke-width="22" stroke-linecap="round"/>
+              <path d="M 30 160 A 130 130 0 0 1 110 48" fill="none" stroke="#FF1744" stroke-width="22" stroke-linecap="round"/>
+              <path d="M 110 48 A 130 130 0 0 1 210 48" fill="none" stroke="#FFD600" stroke-width="22" stroke-linecap="round"/>
+              <path d="M 210 48 A 130 130 0 0 1 290 160" fill="none" stroke="#00E676" stroke-width="22" stroke-linecap="round"/>
+            </svg>
+
+            <div id="needle" style="
+              position:absolute; bottom:18px; left:50%; width:5px; height:125px;
+              background: linear-gradient(to top, #E0D4FF, #ffffff);
+              transform-origin: bottom center;
+              transform: translateX(-50%) rotate(-90deg);
+              border-radius: 4px; z-index: 10;
+              box-shadow: 0 0 15px rgba(224, 212, 255, 0.7);
+            "></div>
+
+            <div style="
+              position:absolute; bottom:8px; left:50%; transform: translateX(-50%);
+              width:24px; height:24px; background: #E0D4FF; border-radius: 50%;
+              border: 3px solid #0f0f1a; box-shadow: 0 0 18px rgba(224,212,255,0.8); z-index: 20;
+            "></div>
+          </div>
+
+          <div id="score" style="
+            font-size: 78px; font-weight: 800; color: {zone_color};
+            margin-top: -20px; line-height: 1;
+            text-shadow: 0 0 40px {zone_color}66;
+          ">0</div>
+
+          <div style="font-size: 20px; font-weight: 600; color: {zone_color}; letter-spacing: 5px; margin-top: 2px;">
+            {zone.upper()}
+          </div>
+
+          <div style="margin-top: 14px; font-size: 15px; color: #C4B5FD; text-align: center; max-width: 340px;">
+            {message}
+          </div>
+        </div>
+
+        <script>
+          const needle = document.getElementById('needle');
+          const scoreEl = document.getElementById('score');
+          const targetAngle = {final_angle - 90};
+          const targetScore = {score};
+
+          setTimeout(() => {{
+            needle.style.transition = 'transform 1.8s cubic-bezier(0.22, 1, 0.36, 1)';
+            needle.style.transform = `translateX(-50%) rotate(${{targetAngle}}deg)`;
+          }}, 80);
+
+          let current = 0;
+          const duration = 1800;
+          const start = performance.now();
+
+          function animateScore(time) {{
+            const progress = Math.min((time - start) / duration, 1);
+            const ease = 1 - Math.pow(1 - progress, 3);
+            current = Math.floor(ease * targetScore);
+            scoreEl.innerText = current;
+            if (progress < 1) requestAnimationFrame(animateScore);
+          }}
+          requestAnimationFrame(animateScore);
+        </script>
+        """
+        components.html(meter_html, height=400)
+
+        st.caption(f"Jupiter → {result['jup_h']}th from Moon  •  Venus → {result['ven_h']}th from Moon  •  Moon → {result['moon_h']}th from Ascendant")
+        st.markdown("---")
+
+    # ====================== PROFILE SECTION ======================
     profiles = get_user_profiles(user_id)
 
     if profiles:
@@ -231,7 +301,6 @@ else:
         selected = st.selectbox("Select Birth Profile", profile_names)
         selected_profile = profiles[profile_names.index(selected)]
 
-        # Edit / Delete buttons
         col_edit, col_del = st.columns(2)
         with col_edit:
             if st.button("✏️ Edit Profile", use_container_width=True):
@@ -250,8 +319,6 @@ else:
     edit_mode = "edit_profile" in st.session_state and st.session_state.edit_profile is not None
 
     with st.expander("➕ Add / Edit Birth Profile", expanded=edit_mode or not profiles):
-
-        # ----- City Search (OUTSIDE form so Enter doesn't submit) -----
         st.markdown("**Search City**")
         city_query = st.text_input("Type city name", placeholder="e.g. Nagpur, Tokyo, Mumbai...", key="city_search")
 
@@ -272,25 +339,20 @@ else:
             else:
                 st.warning("No cities found. Try a different spelling.")
 
-        # ----- Form -----
         with st.form("profile_form"):
             default = st.session_state.get("edit_profile", {})
 
             name = st.text_input("Profile Name", value=default.get("name", ""))
-
             c1, c2, c3 = st.columns(3)
             year = c1.number_input("Year", 1900, 2100, value=default.get("year", 1996))
             month = c2.number_input("Month", 1, 12, value=default.get("month", 9))
             day = c3.number_input("Day", 1, 31, value=default.get("day", 25))
-
             c4, c5, c6 = st.columns(3)
             hour = c4.number_input("Hour (24h)", 0, 23, value=default.get("hour", 7))
             minute = c5.number_input("Minute", 0, 59, value=default.get("minute", 15))
             second = c6.number_input("Second", 0, 59, value=default.get("second", 0))
-
             place_name = st.text_input("Place Name (optional)", value=default.get("place_name", ""))
 
-            # Hidden lat/lon (only for saving)
             if lat is None and default:
                 lat = default.get("latitude")
                 lon = default.get("longitude")
@@ -305,26 +367,17 @@ else:
                 else:
                     data = {
                         "name": name,
-                        "year": int(year),
-                        "month": int(month),
-                        "day": int(day),
-                        "hour": int(hour),
-                        "minute": int(minute),
-                        "second": int(second),
-                        "latitude": float(lat),
-                        "longitude": float(lon),
+                        "year": int(year), "month": int(month), "day": int(day),
+                        "hour": int(hour), "minute": int(minute), "second": int(second),
+                        "latitude": float(lat), "longitude": float(lon),
                         "place_name": place_name or (selected_city["display"] if selected_city is not None else "")
                     }
 
                     if edit_mode:
                         supabase.table("birth_profiles").update(data).eq("id", default["id"]).execute()
-                        
-                        # Clear old natal cache
                         supabase.table("natal_cache").delete().eq("profile_id", default["id"]).execute()
-                        
                         if "last_result" in st.session_state:
                             del st.session_state.last_result
-                            
                         st.success("Profile updated! Please calculate again.")
                         del st.session_state.edit_profile
                     else:
@@ -333,7 +386,8 @@ else:
 
                     time.sleep(0.8)
                     st.rerun()
-    # Calculate button
+
+    # ====================== CALCULATE BUTTON ======================
     if selected_profile and st.button("🔮 Calculate Current Luck", type="primary", use_container_width=True):
         with st.spinner("Aligning with the stars..."):
             try:
@@ -367,10 +421,10 @@ else:
                     p["latitude"], p["longitude"], utc_offset, API_KEY
                 )
                 transit_df = planets_to_df(transit_raw)
+
                 current_maha = get_current_maha(maha_dict, now, tz)
                 score, jup_h, ven_h, moon_h = calculate_luck_score(natal_df, transit_df, current_maha)
 
-                # Save result for both screens
                 st.session_state.last_result = {
                     "score": score,
                     "jup_h": jup_h,
@@ -386,75 +440,14 @@ else:
             except Exception as e:
                 st.error(f"Error: {str(e)}")
 
-    # ====================== VIEWS ======================
-    if st.session_state.last_result:
+    # ====================== CHARTS VIEW ======================
+    if st.session_state.last_result and st.session_state.view == "charts":
         result = st.session_state.last_result
-
-        # ---- VIEW 1: LUCK METER ----
-        if st.session_state.view == "meter":
-            score = result["score"]
-            current_maha = result["current_maha"]
-
-            if score >= 67:
-                zone, zone_color, message = "High", "#00E676", "The cosmos favors bold action"
-            elif score >= 34:
-                zone, zone_color, message = "Moderate", "#FFD600", "Steady energy — move with care"
-            else:
-                zone, zone_color, message = "Low", "#FF1744", "The stars advise patience"
-
-            angle = (score / 100) * 180
-
-            meter_html = f"""
-            <div style="display:flex; flex-direction:column; align-items:center; padding: 10px 0 30px 0;">
-              <div style="font-size:15px; color:#A78BFA; letter-spacing:3px; margin-bottom:8px;">
-                CURRENT MAHA-DASHA • {current_maha.upper()}
-              </div>
-
-              <div style="position:relative; width:300px; height:170px;">
-                <svg width="300" height="170" viewBox="0 0 300 170">
-                  <path d="M 25 155 A 125 125 0 0 1 100 40" fill="none" stroke="#FF1744" stroke-width="20" stroke-linecap="round" opacity="0.9"/>
-                  <path d="M 100 40 A 125 125 0 0 1 200 40" fill="none" stroke="#FFD600" stroke-width="20" stroke-linecap="round" opacity="0.9"/>
-                  <path d="M 200 40 A 125 125 0 0 1 275 155" fill="none" stroke="#00E676" stroke-width="20" stroke-linecap="round" opacity="0.9"/>
-                </svg>
-                <div style="
-                  position:absolute; bottom:12px; left:50%; width:5px; height:120px;
-                  background:linear-gradient(to top, #E0D4FF, #fff);
-                  transform-origin:bottom center;
-                  transform:translateX(-50%) rotate({angle - 90}deg);
-                  border-radius:4px; z-index:10;
-                  box-shadow: 0 0 12px rgba(224, 212, 255, 0.6);
-                  transition: transform 1.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-                "></div>
-                <div style="
-                  position:absolute; bottom:2px; left:50%; transform:translateX(-50%);
-                  width:22px; height:22px; background:#E0D4FF; border-radius:50%;
-                  border:3px solid #1B2735; box-shadow:0 0 15px rgba(224,212,255,0.7); z-index:20;
-                "></div>
-              </div>
-
-              <div style="font-size:72px; font-weight:800; color:{zone_color}; margin-top:-15px;
-                          text-shadow: 0 0 30px {zone_color}55; line-height:1;">
-                {score}
-              </div>
-              <div style="font-size:20px; font-weight:600; color:{zone_color}; letter-spacing:4px; margin-top:2px;">
-                {zone.upper()}
-              </div>
-              <div style="margin-top:18px; font-size:16px; color:#C4B5FD; text-align:center; max-width:340px;">
-                {message}
-              </div>
-            </div>
-            """
-            components.html(meter_html, height=380)
-
-            st.caption(f"Jupiter → {result['jup_h']}th from Moon  •  Venus → {result['ven_h']}th from Moon  •  Moon → {result['moon_h']}th from Ascendant")
-
-        # ---- VIEW 2: CHARTS ----
-        elif st.session_state.view == "charts":
-            st.markdown("### 📜 Planetary Positions")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown("#### Natal Chart")
-                st.dataframe(result["natal_df"], use_container_width=True, height=420)
-            with col2:
-                st.markdown("#### Current Transit")
-                st.dataframe(result["transit_df"], use_container_width=True, height=420)
+        st.markdown("### 📜 Planetary Positions")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### Natal Chart")
+            st.dataframe(result["natal_df"], use_container_width=True, height=420)
+        with col2:
+            st.markdown("#### Current Transit")
+            st.dataframe(result["transit_df"], use_container_width=True, height=420)
