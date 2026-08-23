@@ -317,18 +317,22 @@ else:
                     }
 
                     if edit_mode:
-                        # Update existing
                         supabase.table("birth_profiles").update(data).eq("id", default["id"]).execute()
-                        st.success("Profile updated!")
+                        
+                        # Clear old natal cache
+                        supabase.table("natal_cache").delete().eq("profile_id", default["id"]).execute()
+                        
+                        if "last_result" in st.session_state:
+                            del st.session_state.last_result
+                            
+                        st.success("Profile updated! Please calculate again.")
                         del st.session_state.edit_profile
                     else:
-                        # Create new
                         save_profile(user_id, data)
                         st.success("Profile saved!")
 
                     time.sleep(0.8)
                     st.rerun()
-
     # Calculate button
     if selected_profile and st.button("🔮 Calculate Current Luck", type="primary", use_container_width=True):
         with st.spinner("Aligning with the stars..."):
