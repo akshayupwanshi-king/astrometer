@@ -343,28 +343,111 @@ else:
 
                 st.success(f"**Current Maha-Dasha:** {current_maha}")
 
-                # ---- Luck Meter ----
+                                # ---- Speedtest-style Luck Meter ----
                 score, jup_h, ven_h, moon_h = calculate_luck_score(natal_df, transit_df, current_maha)
 
                 if score >= 67:
-                    zone = "🟢 High"
-                    color = "green"
+                    zone = "High"
+                    zone_color = "#00C853"      # green
                     message = "Excellent time for important actions!"
                 elif score >= 34:
-                    zone = "🟡 Moderate"
-                    color = "orange"
+                    zone = "Moderate"
+                    zone_color = "#FFB300"      # amber
                     message = "Steady progress. Avoid major risks."
                 else:
-                    zone = "🔴 Low"
-                    color = "red"
+                    zone = "Low"
+                    zone_color = "#FF1744"      # red
                     message = "Low energy period. Better to wait."
 
-                st.markdown(f"### Luck Score: **{score}/100**  —  {zone}")
-                st.progress(score / 100)
-                st.info(f"**{message}**")
+                # Calculate needle angle (0 = left, 180 = right)
+                # We map 0→100 score to 0°→180°
+                angle = (score / 100) * 180
 
-                st.caption(f"Jupiter in {jup_h}th from Moon • Venus in {ven_h}th from Moon • Moon in {moon_h}th from Ascendant")
+                meter_html = f"""
+                <div style="display:flex; flex-direction:column; align-items:center; margin: 20px 0 30px 0;">
+                  
+                  <!-- Circular Gauge -->
+                  <div style="position:relative; width:280px; height:160px;">
+                    <!-- Background arc -->
+                    <svg width="280" height="160" viewBox="0 0 280 160">
+                      <!-- Red zone -->
+                      <path d="M 30 150 A 110 110 0 0 1 95 45" fill="none" stroke="#FF1744" stroke-width="18" stroke-linecap="round"/>
+                      <!-- Yellow zone -->
+                      <path d="M 95 45 A 110 110 0 0 1 185 45" fill="none" stroke="#FFB300" stroke-width="18" stroke-linecap="round"/>
+                      <!-- Green zone -->
+                      <path d="M 185 45 A 110 110 0 0 1 250 150" fill="none" stroke="#00C853" stroke-width="18" stroke-linecap="round"/>
+                    </svg>
 
+                    <!-- Needle -->
+                    <div style="
+                      position:absolute;
+                      bottom:10px;
+                      left:50%;
+                      width:6px;
+                      height:110px;
+                      background: #222;
+                      transform-origin: bottom center;
+                      transform: translateX(-50%) rotate({angle - 90}deg);
+                      border-radius: 4px;
+                      z-index: 10;
+                      transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    "></div>
+
+                    <!-- Center circle -->
+                    <div style="
+                      position:absolute;
+                      bottom:0;
+                      left:50%;
+                      transform: translateX(-50%);
+                      width:28px;
+                      height:28px;
+                      background:#222;
+                      border-radius:50%;
+                      border: 4px solid white;
+                      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                      z-index: 20;
+                    "></div>
+                  </div>
+
+                  <!-- Big Score -->
+                  <div style="
+                    font-size: 64px;
+                    font-weight: 800;
+                    color: {zone_color};
+                    margin-top: -10px;
+                    line-height: 1;
+                    font-family: 'Segoe UI', system-ui, sans-serif;
+                  ">
+                    {score}
+                  </div>
+
+                  <!-- Zone label -->
+                  <div style="
+                    font-size: 22px;
+                    font-weight: 600;
+                    color: {zone_color};
+                    margin-top: 4px;
+                    letter-spacing: 1px;
+                  ">
+                    {zone.upper()}
+                  </div>
+
+                  <!-- Message -->
+                  <div style="
+                    margin-top: 16px;
+                    font-size: 16px;
+                    color: #555;
+                    text-align: center;
+                    max-width: 320px;
+                  ">
+                    {message}
+                  </div>
+                </div>
+                """
+
+                st.components.v1.html(meter_html, height=340)
+
+                st.caption(f"Jupiter in {jup_h}th from Moon  •  Venus in {ven_h}th from Moon  •  Moon in {moon_h}th from Ascendant")
                 # Charts
                 col1, col2 = st.columns(2)
                 with col1:
