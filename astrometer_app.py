@@ -4,6 +4,17 @@ from datetime import datetime
 import pytz
 from supabase import create_client
 import streamlit.components.v1 as components
+import pandas as pd
+
+@st.cache_data
+def load_cities():
+    df = pd.read_csv("worldcities.csv")
+    # Keep only useful columns and clean
+    df = df[["city_ascii", "lat", "lng", "country"]].dropna()
+    df["display"] = df["city_ascii"] + ", " + df["country"]
+    return df
+
+cities_df = load_cities()
 
 from astro_engine import (
     get_timezone,
@@ -224,33 +235,58 @@ else:
         st.info("No birth profiles yet. Add one below.")
         selected_profile = None
 
-    with st.expander("➕ Add New Birth Profile"):
-        with st.form("new_profile"):
-            name = st.text_input("Profile Name")
-            c1, c2, c3 = st.columns(3)
-            year = c1.number_input("Year", 1900, 2100, 1996)
-            month = c2.number_input("Month", 1, 12, 9)
-            day = c3.number_input("Day", 1, 31, 25)
-            c4, c5, c6 = st.columns(3)
-            hour = c4.number_input("Hour", 0, 23, 7)
-            minute = c5.number_input("Minute", 0, 59, 15)
-            second = c6.number_input("Second", 0, 59, 0)
-            lat = st.number_input("Latitude", value=21.146633, format="%.6f")
-            lon = st.number_input("Longitude", value=79.088860, format="%.6f")
-            place = st.text_input("Place Name (optional)")
-
-            if st.form_submit_button("Save Profile"):
-                data = {
-                    "name": name,
-                    "year": int(year), "month": int(month), "day": int(day),
-                    "hour": int(hour), "minute": int(minute), "second": int(second),
-                    "latitude": float(lat), "longitude": float(lon),
-                    "place_name": place
-                }
-                save_profile(user_id, data)
-                st.success("Profile saved!")
-                time.sleep(0.7)
-                st.rerun()
+        with st.expander("➕ Add New Birth Profile", expanded=False):
+            with st.form("new_profile"):
+                name = st.text_input("Profile Name (e.g. Myself, Mom)")
+    
+                # ---- City Auto Suggest ----
+                city_search = st.text_input("Type City Name", placeholder="Start typing city...")
+    
+                matched_cities = []
+                selected_city_data = None
+    
+                if city_search and len(city_search) >= 2:
+                    mask = cities_df["city_ascii"].str.contains(city_search, case=False, na=False)
+                    matched = cities_df[mask].head(12)
+    
+                    if not matched.empty:
+                        options = matched["display"].tolist()
+                        chosen = st.selectbox("Select city", options, key="city_select")
+                        selected_city_data = matched[matched["display"] == chosen].iloc[0]
+    
+                # Auto-fill lat / lon
+                if selected_city_data is not None:
+                    lat = float(selected_city_data["lat"])
+                    lon = float(selected_city_data["lng"])
+                    st.success(f"📍 {selected_city_data['display']}  →  {lat:.4f}, {lon:.4f}")
+                else:
+                    lat = st.number_input("Latitude", value=21.146633, format="%.6f")
+                    lon = st.number_input("Longitude", value=79.088860, format="%.6f")
+    
+                c1, c2, c3 = st.columns(3)
+                year = c1.number_input("Year", 1900, 2100, 1996)
+                month = c2.number_input("Month", 1, 12, 9)
+                day = c3.number_input("Day", 1, 31, 25)
+    
+                c4, c5, c6 = st.columns(3)
+                hour = c4.number_input("Hour (24h)", 0, 23, 7)
+                minute = c5.number_input("Minute", 0, 59, 15)
+                second = c6.number_input("Second", 0, 59, 0)
+    
+                place = st.text_input("Place Name (optional)")
+    
+                if st.form_submit_button("Save Profile"):
+                    data = {
+                        "name": name,
+                        "year": int(year), "month": int(month), "day": int(day),
+                        "hour": int(hour), "minute": int(minute), "second": int(second),
+                        "latitude": float(lat), "longitude": float(lon),
+                        "place_name": place or (selected_city_data["display"] if selected_city_data is not None else "")
+                    }
+                    save_profile(user_id, data)
+                    st.success("Profile saved!")
+                    time.sleep(0.7)
+                    st.rerun()
 
     # Calculate button
     if selected_profile and st.button("🔮 Calculate Current Luck", type="primary", use_container_width=True):
