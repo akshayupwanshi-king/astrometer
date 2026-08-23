@@ -19,6 +19,17 @@ BASE_URL = "https://json.freeastrologyapi.com"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+
+# Restore session if tokens exist
+if "access_token" in st.session_state and "refresh_token" in st.session_state:
+    try:
+        supabase.auth.set_session(
+            st.session_state["access_token"],
+            st.session_state["refresh_token"]
+        )
+    except:
+        pass
+
 # ====================== AUTH FUNCTIONS ======================
 def sign_up(email, password):
     try:
@@ -31,7 +42,9 @@ def sign_in(email, password):
     try:
         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
         if res and res.session:
-            # Important: set the session so RLS works
+            # Save tokens in session_state
+            st.session_state["access_token"] = res.session.access_token
+            st.session_state["refresh_token"] = res.session.refresh_token
             supabase.auth.set_session(res.session.access_token, res.session.refresh_token)
         return res
     except Exception as e:
