@@ -21,27 +21,20 @@ BASE_URL = "https://json.freeastrologyapi.com"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ====================== AUTH HELPERS ======================
+# ====================== AUTH FUNCTIONS ======================
 
-def init_supabase():
-    return create_client(st.secrets["supabase"]["url"], st.secrets["supabase"]["key"])
-
-supabase = init_supabase()
-
-def sign_up(email: str, password: str):
+def sign_up(email, password):
     try:
-        res = supabase.auth.sign_up({"email": email, "password": password})
-        return res
+        return supabase.auth.sign_up({"email": email, "password": password})
     except Exception as e:
-        st.error(f"Signup error: {str(e)}")
+        st.error(f"Signup failed: {e}")
         return None
 
-def sign_in(email: str, password: str):
+def sign_in(email, password):
     try:
-        res = supabase.auth.sign_in_with_password({"email": email, "password": password})
-        return res
+        return supabase.auth.sign_in_with_password({"email": email, "password": password})
     except Exception as e:
-        st.error(f"Login error: {str(e)}")
+        st.error(f"Login failed: {e}")
         return None
 
 def sign_out():
@@ -53,76 +46,69 @@ def sign_out():
         del st.session_state[key]
     st.rerun()
 
-# ====================== MAIN APP ======================
+# ====================== SESSION STATE ======================
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+# ====================== APP ======================
 
 st.title("🌠 AstroMeter Pro")
 
-# Initialize session state
-if "user" not in st.session_state:
-    st.session_state.user = None
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-# ---------- LOGIN / SIGNUP UI ----------
+# ---------- NOT LOGGED IN ----------
 if not st.session_state.logged_in:
 
     tab1, tab2 = st.tabs(["Login", "Sign Up"])
 
     with tab1:
-        st.subheader("Login to your account")
+        st.subheader("Login")
         email = st.text_input("Email", key="login_email")
-        password = st.text_input("Password", type="password", key="login_password")
+        password = st.text_input("Password", type="password", key="login_pass")
 
         if st.button("Login", type="primary", use_container_width=True):
-            with st.spinner("Logging in..."):
-                res = sign_in(email, password)
-                if res and res.user:
-                    st.session_state.user = res.user
-                    st.session_state.logged_in = True
-                    st.success("Login successful!")
-                    time.sleep(0.8)
-                    st.rerun()
-                else:
-                    st.error("Invalid email or password")
+            res = sign_in(email, password)
+            if res and res.user:
+                st.session_state.user = res.user
+                st.session_state.logged_in = True
+                st.success("Login successful!")
+                time.sleep(0.7)
+                st.rerun()
 
     with tab2:
-        st.subheader("Create a new account")
+        st.subheader("Create Account")
         email = st.text_input("Email", key="signup_email")
-        password = st.text_input("Password", type="password", key="signup_password")
-        password2 = st.text_input("Confirm Password", type="password", key="signup_password2")
+        password = st.text_input("Password", type="password", key="signup_pass")
+        password2 = st.text_input("Confirm Password", type="password", key="signup_pass2")
 
         if st.button("Create Account", use_container_width=True):
             if password != password2:
                 st.error("Passwords do not match")
             elif len(password) < 6:
-                st.error("Password must be at least 6 characters")
+                st.error("Password should be at least 6 characters")
             else:
                 res = sign_up(email, password)
                 if res and res.user:
-                    st.success("Account created successfully! You can now login.")
-                    st.info("If email confirmation is enabled, please check your inbox.")
+                    st.success("Account created! You can now login.")
                 else:
-                    st.error("Could not create account. Email may already be registered.")
+                    st.error("Could not create account.")
 
-# ---------- LOGGED IN UI ----------
+# ---------- LOGGED IN ----------
 else:
     user = st.session_state.user
 
-    # Sidebar
     with st.sidebar:
-        st.success(f"Logged in as:\n**{user.email}**")
-        st.markdown("---")
+        st.success(f"Logged in as:\n{user.email}")
         if st.button("Logout", use_container_width=True):
             sign_out()
 
-    st.header("Welcome to AstroMeter Pro")
+    st.header("Welcome!")
     st.write("You are successfully logged in.")
-
-    # ---- Your main app content starts here ----
-    st.info("Main application content will appear here (Birth Profiles, Calculate Luck, etc.)")
-
-    # Temporary test
     st.write("User ID:", user.id)
+
+    st.info("Here we will add Birth Profiles + Luck Calculation next.")
+    
 # ====================== DATABASE HELPERS ======================
 
 def get_user_profiles(user_id):
