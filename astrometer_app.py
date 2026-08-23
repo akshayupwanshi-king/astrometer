@@ -29,7 +29,11 @@ def sign_up(email, password):
 
 def sign_in(email, password):
     try:
-        return supabase.auth.sign_in_with_password({"email": email, "password": password})
+        res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        if res and res.session:
+            # Important: set the session so RLS works
+            supabase.auth.set_session(res.session.access_token, res.session.refresh_token)
+        return res
     except Exception as e:
         st.error(f"Login failed: {e}")
         return None
