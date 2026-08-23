@@ -1,12 +1,18 @@
 import streamlit as st
-import requests
-import json
-import pandas as pd
+import time
 from datetime import datetime
 import pytz
-from timezonefinder import TimezoneFinder
 from supabase import create_client
-import time
+
+# Import all secret logic from engine
+from astro_engine import (
+    get_timezone,
+    get_planets_extended,
+    get_maha_dashas,
+    planets_to_df,
+    calculate_luck_score,
+    get_current_maha
+)
 
 # ====================== PAGE CONFIG ======================
 st.set_page_config(page_title="AstroMeter Pro", page_icon="🌠", layout="wide")
@@ -15,10 +21,8 @@ st.set_page_config(page_title="AstroMeter Pro", page_icon="🌠", layout="wide")
 SUPABASE_URL = st.secrets["supabase"]["url"]
 SUPABASE_KEY = st.secrets["supabase"]["key"]
 API_KEY = st.secrets["api"]["key"]
-BASE_URL = "https://json.freeastrologyapi.com"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
 
 # Restore session if tokens exist
 if "access_token" in st.session_state and "refresh_token" in st.session_state:
@@ -42,7 +46,6 @@ def sign_in(email, password):
     try:
         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
         if res and res.session:
-            # Save tokens in session_state
             st.session_state["access_token"] = res.session.access_token
             st.session_state["refresh_token"] = res.session.refresh_token
             supabase.auth.set_session(res.session.access_token, res.session.refresh_token)
@@ -81,119 +84,6 @@ def save_natal_cache(profile_id, natal_json, maha_json):
         "updated_at": datetime.utcnow().isoformat()
     }).execute()
 
-# ====================== ASTROLOGY FUNCTIONS ======================
-def get_timezone(lat, lon):
-    tf = TimezoneFinder()
-    return tf.timezone_at(lng=lon, lat=lat) or "Asia/Kolkata"
-
-@st.cache_data(ttl=60*30)
-def get_planets_extended(year, month, day, hour, minute, second, lat, lon, tz_offset):
-    url = f"{BASE_URL}/planets/extended"
-    payload = {
-        "year": year, "month": month, "date": day,
-        "hours": hour, "minutes": minute, "seconds": second,
-        "latitude": lat, "longitude": lon, "timezone": tz_offset,
-        "settings": {"observation_point": "topocentric", "ayanamsha": "lahiri"}
-    }
-    headers = {"Content-Type": "application/json", "x-api-key": API_KEY}
-
-    for attempt in range(3):
-        r = requests.post(url, headers=headers, json=payload, timeout=20)
-        if r.status_code == 429:
-            time.sleep((attempt + 1) * 8)
-            continue
-        r.raise_for_status()
-        return r.json().get("output", {})
-    raise Exception("API rate limit exceeded")
-
-def get_maha_dashas(year, month, day, hour, minute, second, lat, lon, tz_offset):
-    url = f"{BASE_URL}/vimsottari/maha-dasas"
-    payload = {
-        "year": year, "month": month, "date": day,
-        "hours": hour, "minutes": minute, "seconds": second,
-        "latitude": lat, "longitude": lon, "timezone": tz_offset,
-        "config": {"observation_point": "topocentric", "ayanamsha": "lahiri"}
-    }
-    headers = {"Content-Type": "application/json", "x-api-key": API_KEY}
-
-    for attempt in range(4):
-        try:
-            r = requests.post(url, headers=headers, json=payload, timeout=25)
-            
-            if r.status_code == 429:
-                wait_time = (attempt + 1) * 10
-                st.warning(f"API rate limit hit. Waiting {wait_time} seconds... (try {attempt+1}/4)")
-                time.sleep(wait_time)
-                continue
-                
-            r.raise_for_status()
-            return json.loads(r.json().get("output", "{}"))
-            
-        except Exception as e:
-            if attempt == 3:
-                raise e
-            time.sleep(5)
-    
-    raise Exception("Failed to get Maha-Dasha after multiple retries due to rate limiting.")
-
-def planets_to_df(data):
-    rows = []
-    for name, info in data.items():
-        rows.append({
-            "Planet": name,
-            "House": info.get("house_number"),
-            "Zodiac_Sign": info.get("zodiac_sign_name"),
-            "Nakshatra": info.get("nakshatra_name"),
-            "Dasha_Lord": info.get("nakshatra_vimsottari_lord"),
-            "FullDeg": info.get("fullDegree"),
-            "Retro": info.get("isRetro")
-        })
-    return pd.DataFrame(rows)
-
-signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
-         'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
-
-good_houses = {1: 30, 5: 20, 9: 20, 2: 10, 4: 10, 7: 10, 11: 10}
-
-def get_house_from_sign(curr_sign, ref_sign):
-    try:
-        return (signs.index(curr_sign) - signs.index(ref_sign)) % 12 + 1
-    except:
-        return 6
-
-def calculate_luck_score(natal_df, transit_df, current_maha):
-    try:
-        moon_sign = natal_df[natal_df['Planet'] == 'Moon']['Zodiac_Sign'].values[0]
-        asc_sign  = natal_df[natal_df['Planet'] == 'Ascendant']['Zodiac_Sign'].values[0]
-
-        # Jupiter
-        jup_sign = transit_df[transit_df['Planet'] == 'Jupiter']['Zodiac_Sign'].values[0]
-        jup_h = get_house_from_sign(jup_sign, moon_sign)
-        jup_score = good_houses.get(jup_h, 5)
-
-        # Venus
-        ven_sign = transit_df[transit_df['Planet'] == 'Venus']['Zodiac_Sign'].values[0]
-        ven_h = get_house_from_sign(ven_sign, moon_sign)
-        ven_score = good_houses.get(ven_h, 5)
-
-        # Moon
-        moon_sign_t = transit_df[transit_df['Planet'] == 'Moon']['Zodiac_Sign'].values[0]
-        moon_h = get_house_from_sign(moon_sign_t, asc_sign)
-        moon_score = good_houses.get(moon_h, 5)
-
-        # Saturn malefic
-        sat_sign = transit_df[transit_df['Planet'] == 'Saturn']['Zodiac_Sign'].values[0]
-        sat_h = get_house_from_sign(sat_sign, moon_sign)
-        malefic = -15 if sat_h in [1, 5, 9] else 0
-
-        # Dasha bonus
-        dasha_bonus = 18 if current_maha in ['Jupiter', 'Venus', 'Mercury', 'Moon'] else 8
-
-        total = min(max(jup_score + ven_score + moon_score + malefic + dasha_bonus, 5), 100)
-        return total, jup_h, ven_h, moon_h
-    except Exception as e:
-        return 40, 6, 6, 6
-
 # ====================== SESSION STATE ======================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -205,7 +95,6 @@ st.title("🌠 AstroMeter Pro")
 
 # ---------- LOGIN / SIGNUP ----------
 if not st.session_state.logged_in:
-
     tab1, tab2 = st.tabs(["Login", "Sign Up"])
 
     with tab1:
@@ -310,12 +199,14 @@ else:
                     natal_raw = get_planets_extended(
                         p["year"], p["month"], p["day"],
                         p["hour"], p["minute"], p["second"],
-                        p["latitude"], p["longitude"], utc_offset
+                        p["latitude"], p["longitude"], utc_offset,
+                        api_key=API_KEY
                     )
                     maha_dict = get_maha_dashas(
                         p["year"], p["month"], p["day"],
                         p["hour"], p["minute"], p["second"],
-                        p["latitude"], p["longitude"], utc_offset
+                        p["latitude"], p["longitude"], utc_offset,
+                        api_key=API_KEY
                     )
                     save_natal_cache(p["id"], natal_raw, maha_dict)
 
@@ -325,129 +216,69 @@ else:
                 transit_raw = get_planets_extended(
                     now.year, now.month, now.day,
                     now.hour, now.minute, now.second,
-                    p["latitude"], p["longitude"], utc_offset
+                    p["latitude"], p["longitude"], utc_offset,
+                    api_key=API_KEY
                 )
                 transit_df = planets_to_df(transit_raw)
 
-                # Find current Maha Dasha
-                current_maha = "Unknown"
-                for info in maha_dict.values():
-                    start = datetime.fromisoformat(info["start_time"].replace(" ", "T"))
-                    end = datetime.fromisoformat(info["end_time"].replace(" ", "T"))
-                    if start.tzinfo is None:
-                        start = tz.localize(start)
-                        end = tz.localize(end)
-                    if start <= now <= end:
-                        current_maha = info["Lord"]
-                        break
+                current_maha = get_current_maha(maha_dict, now, tz)
 
                 st.success(f"**Current Maha-Dasha:** {current_maha}")
 
-                                # ---- Speedtest-style Luck Meter ----
+                # ---- Speedtest-style Luck Meter ----
                 score, jup_h, ven_h, moon_h = calculate_luck_score(natal_df, transit_df, current_maha)
 
                 if score >= 67:
                     zone = "High"
-                    zone_color = "#00C853"      # green
+                    zone_color = "#00C853"
                     message = "Excellent time for important actions!"
                 elif score >= 34:
                     zone = "Moderate"
-                    zone_color = "#FFB300"      # amber
+                    zone_color = "#FFB300"
                     message = "Steady progress. Avoid major risks."
                 else:
                     zone = "Low"
-                    zone_color = "#FF1744"      # red
+                    zone_color = "#FF1744"
                     message = "Low energy period. Better to wait."
 
-                # Calculate needle angle (0 = left, 180 = right)
-                # We map 0→100 score to 0°→180°
                 angle = (score / 100) * 180
 
                 meter_html = f"""
                 <div style="display:flex; flex-direction:column; align-items:center; margin: 20px 0 30px 0;">
-                  
-                  <!-- Circular Gauge -->
                   <div style="position:relative; width:280px; height:160px;">
-                    <!-- Background arc -->
                     <svg width="280" height="160" viewBox="0 0 280 160">
-                      <!-- Red zone -->
                       <path d="M 30 150 A 110 110 0 0 1 95 45" fill="none" stroke="#FF1744" stroke-width="18" stroke-linecap="round"/>
-                      <!-- Yellow zone -->
                       <path d="M 95 45 A 110 110 0 0 1 185 45" fill="none" stroke="#FFB300" stroke-width="18" stroke-linecap="round"/>
-                      <!-- Green zone -->
                       <path d="M 185 45 A 110 110 0 0 1 250 150" fill="none" stroke="#00C853" stroke-width="18" stroke-linecap="round"/>
                     </svg>
-
-                    <!-- Needle -->
                     <div style="
-                      position:absolute;
-                      bottom:10px;
-                      left:50%;
-                      width:6px;
-                      height:110px;
-                      background: #222;
-                      transform-origin: bottom center;
-                      transform: translateX(-50%) rotate({angle - 90}deg);
-                      border-radius: 4px;
-                      z-index: 10;
-                      transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+                      position:absolute; bottom:10px; left:50%; width:6px; height:110px;
+                      background:#222; transform-origin:bottom center;
+                      transform:translateX(-50%) rotate({angle - 90}deg);
+                      border-radius:4px; z-index:10;
+                      transition:transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
                     "></div>
-
-                    <!-- Center circle -->
                     <div style="
-                      position:absolute;
-                      bottom:0;
-                      left:50%;
-                      transform: translateX(-50%);
-                      width:28px;
-                      height:28px;
-                      background:#222;
-                      border-radius:50%;
-                      border: 4px solid white;
-                      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                      z-index: 20;
+                      position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+                      width:28px; height:28px; background:#222; border-radius:50%;
+                      border:4px solid white; box-shadow:0 2px 8px rgba(0,0,0,0.3); z-index:20;
                     "></div>
                   </div>
-
-                  <!-- Big Score -->
-                  <div style="
-                    font-size: 64px;
-                    font-weight: 800;
-                    color: {zone_color};
-                    margin-top: -10px;
-                    line-height: 1;
-                    font-family: 'Segoe UI', system-ui, sans-serif;
-                  ">
+                  <div style="font-size:64px; font-weight:800; color:{zone_color}; margin-top:-10px; line-height:1;">
                     {score}
                   </div>
-
-                  <!-- Zone label -->
-                  <div style="
-                    font-size: 22px;
-                    font-weight: 600;
-                    color: {zone_color};
-                    margin-top: 4px;
-                    letter-spacing: 1px;
-                  ">
+                  <div style="font-size:22px; font-weight:600; color:{zone_color}; margin-top:4px; letter-spacing:1px;">
                     {zone.upper()}
                   </div>
-
-                  <!-- Message -->
-                  <div style="
-                    margin-top: 16px;
-                    font-size: 16px;
-                    color: #555;
-                    text-align: center;
-                    max-width: 320px;
-                  ">
+                  <div style="margin-top:16px; font-size:16px; color:#555; text-align:center; max-width:320px;">
                     {message}
                   </div>
                 </div>
                 """
-
                 st.components.v1.html(meter_html, height=340)
 
                 st.caption(f"Jupiter in {jup_h}th from Moon  •  Venus in {ven_h}th from Moon  •  Moon in {moon_h}th from Ascendant")
+
                 # Charts
                 col1, col2 = st.columns(2)
                 with col1:
