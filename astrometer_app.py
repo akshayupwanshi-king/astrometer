@@ -134,9 +134,9 @@ def build_house_map_from_df(df):
             
     return house_map
 
-def draw_north_indian_chart(natal_planets, transit_planets=None, title="Kundli Chart"):
+def draw_north_indian_chart(natal_planets, transit_planets=None, title="Kundli Chart", transit_color="#06B6D4"):
     """
-    Draws a North Indian Diamond/Square Kundli using Matplotlib.
+    Draws a North Indian Diamond/Square Kundli using Matplotlib with distinct text colors for Natal vs Transits.
     """
     fig, ax = plt.subplots(figsize=(7, 7), facecolor='#0D0F1D')
     ax.set_facecolor('#0D0F1D')
@@ -152,7 +152,7 @@ def draw_north_indian_chart(natal_planets, transit_planets=None, title="Kundli C
         ((5, 0), (10, 5)), ((10, 5), (5, 10))
     ]
     for line in lines:
-        ax.plot([line[0][0], line[1][0]], [line[0][1], line[1][1]], color='#6366F1', linewidth=1.5)
+        ax.plot([line[0][0], line[1][0]], [line[0][0], line[1][1]], color='#6366F1', linewidth=1.5)
 
     # House Center Coordinates
     house_positions = {
@@ -167,20 +167,33 @@ def draw_north_indian_chart(natal_planets, transit_planets=None, title="Kundli C
         n_list = natal_planets.get(house, [])
         t_list = transit_planets.get(house, []) if transit_planets else []
 
-        lines_str = []
+        if not n_list and not t_list:
+            continue
+
+        cx, cy = center[0], center[1]
+
+        # Draw box background when planets exist in house
+        ax.text(
+            cx, cy, " ",
+            bbox=dict(boxstyle='round,pad=0.5', facecolor='#1E1B4B', alpha=0.85, edgecolor='#A855F7')
+        )
+
+        # 1. Render Natal Planets (White Text)
         if n_list:
-            lines_str.append(" ".join(n_list))
-        if t_list:
-            lines_str.append("T: " + " ".join(t_list))
-
-        display_text = "\n".join(lines_str)
-
-        if display_text:
+            y_offset = 0.15 if t_list else 0.0
             ax.text(
-                center[0], center[1], display_text,
+                cx, cy + y_offset, " ".join(n_list),
                 color='#F8FAFC', fontsize=9, fontweight='bold',
-                ha='center', va='center',
-                bbox=dict(boxstyle='round,pad=0.3', facecolor='#1E1B4B', alpha=0.85, edgecolor='#A855F7')
+                ha='center', va='center'
+            )
+
+        # 2. Render Transit Planets (Custom Transit Color)
+        if t_list:
+            y_offset = -0.15 if n_list else 0.0
+            ax.text(
+                cx, cy + y_offset, "T: " + " ".join(t_list),
+                color=transit_color, fontsize=8.5, fontweight='bold',
+                ha='center', va='center'
             )
 
     ax.set_xlim(-0.5, 10.5)
