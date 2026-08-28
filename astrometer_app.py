@@ -5,7 +5,10 @@ import pytz
 from supabase import create_client
 import streamlit.components.v1 as components
 import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
+# Import backend astrological routines
 from astro_engine import (
     get_timezone,
     get_planets_extended,
@@ -47,7 +50,6 @@ st.markdown("""
         color: var(--text-bright);
     }
 
-    /* Modern Glass Card Components */
     .astro-card {
         background: var(--card-bg);
         border: 1px solid var(--card-border);
@@ -74,7 +76,6 @@ st.markdown("""
         font-weight: 600;
     }
 
-    /* Buttons */
     .stButton > button {
         background: linear-gradient(135deg, #A855F7 0%, #6366F1 100%) !important;
         color: #FFFFFF !important;
@@ -92,7 +93,6 @@ st.markdown("""
         box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5) !important;
     }
 
-    /* Form Fields */
     .stTextInput input, .stNumberInput input, .stSelectbox > div > div {
         background: rgba(11, 15, 30, 0.8) !important;
         border: 1px solid var(--card-border) !important;
@@ -109,6 +109,78 @@ st.markdown("""
     footer { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
+
+# ====================== ASTRO HELPER FUNCTIONS ======================
+def map_planets_to_houses(ascendant_deg, planet_positions):
+    """
+    Maps planet longitudes (0-360 deg) to house numbers relative to Ascendant sign.
+    """
+    asc_sign = int(ascendant_deg // 30) + 1  # 1 = Aries ... 12 = Pisces
+    house_map = {i: [] for i in range(1, 13)}
+    house_map[1].append("Asc")
+
+    for planet, long in planet_positions.items():
+        planet_sign = int(long // 30) + 1
+        house_num = (planet_sign - asc_sign) % 12 + 1
+        house_map[house_num].append(planet)
+
+    return house_map
+
+def draw_north_indian_chart(natal_planets, transit_planets=None, title="Kundli Chart"):
+    """
+    Draws a North Indian Diamond/Square Kundli using Matplotlib.
+    """
+    fig, ax = plt.subplots(figsize=(7, 7), facecolor='#0D0F1D')
+    ax.set_facecolor('#0D0F1D')
+
+    # Outer Square
+    outer_square = patches.Rectangle((0, 0), 10, 10, linewidth=2.5, edgecolor='#A855F7', facecolor='none')
+    ax.add_patch(outer_square)
+
+    # Diagonal Lines
+    lines = [
+        ((0, 10), (10, 0)), ((0, 0), (10, 10)),
+        ((5, 10), (0, 5)), ((0, 5), (5, 0)),
+        ((5, 0), (10, 5)), ((10, 5), (5, 10))
+    ]
+    for line in lines:
+        ax.plot([line[0][0], line[1][0]], [line[0][1], line[1][1]], color='#6366F1', linewidth=1.5)
+
+    # House Center Coordinates
+    house_positions = {
+        1: (5.0, 7.5),  2: (2.5, 9.0),  3: (1.0, 7.5),
+        4: (2.5, 5.0),  5: (1.0, 2.5),  6: (2.5, 1.0),
+        7: (5.0, 2.5),  8: (7.5, 1.0),  9: (9.0, 2.5),
+        10: (7.5, 5.0), 11: (9.0, 7.5), 12: (7.5, 9.0)
+    }
+
+    for house in range(1, 13):
+        center = house_positions[house]
+        n_list = natal_planets.get(house, [])
+        t_list = transit_planets.get(house, []) if transit_planets else []
+
+        lines_str = []
+        if n_list:
+            lines_str.append(" ".join(n_list))
+        if t_list:
+            lines_str.append("T: " + " ".join(t_list))
+
+        display_text = "\n".join(lines_str)
+
+        if display_text:
+            ax.text(
+                center[0], center[1], display_text,
+                color='#F8FAFC', fontsize=9, fontweight='bold',
+                ha='center', va='center',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='#1E1B4B', alpha=0.85, edgecolor='#A855F7')
+            )
+
+    ax.set_xlim(-0.5, 10.5)
+    ax.set_ylim(-0.5, 10.5)
+    ax.axis('off')
+    plt.title(title, color='#F8FAFC', fontsize=14, pad=15, fontweight='bold')
+    plt.tight_layout()
+    return fig
 
 # ====================== DATA LOADERS & AUTH ======================
 @st.cache_data
@@ -245,7 +317,7 @@ else:
         if st.button("🎯 Intelligence Dashboard", use_container_width=True):
             st.session_state.view = "meter"
             st.rerun()
-        if st.button("📜 Planetary Matrices", use_container_width=True):
+        if st.button("🔮 North Indian Kundli", use_container_width=True):
             st.session_state.view = "charts"
             st.rerun()
         st.markdown("---")
@@ -269,7 +341,6 @@ else:
 
         final_angle = (score / 100) * 180 - 90
 
-        # Card-based summary metrics above the gauge
         m_col1, m_col2, m_col3 = st.columns(3)
         with m_col1:
             st.markdown(f"""
@@ -480,13 +551,42 @@ else:
             except Exception as e:
                 st.error(f"Execution Error: {str(e)}")
 
-    # ---------- CHARTS VIEW ----------
+    # ---------- NORTH INDIAN KUNDLI CHART VIEW ----------
     if st.session_state.last_result and st.session_state.view == "charts":
         result = st.session_state.last_result
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("#### Natal Chart Matrix")
-            st.dataframe(result["natal_df"], use_container_width=True, height=400)
-        with col2:
-            st.markdown("#### Active Transit Matrix")
-            st.dataframe(result["transit_df"], use_container_width=True, height=400)
+
+        natal_df = result["natal_df"]
+        transit_df = result["transit_df"]
+
+        # Extract Ascendant degree
+        asc_deg = natal_df.loc[natal_df['planet'] == 'Asc', 'longitude'].values[0]
+
+        # Extract planet longitudes
+        natal_longs = dict(zip(natal_df['planet'], natal_df['longitude']))
+        transit_longs = dict(zip(transit_df['planet'], transit_df['longitude']))
+
+        natal_longs.pop('Asc', None)
+        transit_longs.pop('Asc', None)
+
+        # Convert to house relative mappings
+        natal_house_map = map_planets_to_houses(asc_deg, natal_longs)
+        transit_house_map = map_planets_to_houses(asc_deg, transit_longs)
+
+        col_chart, col_data = st.columns([1.2, 1])
+
+        with col_chart:
+            st.markdown("### 🔮 Kundli Chart (North Indian)")
+            fig = draw_north_indian_chart(
+                natal_planets=natal_house_map,
+                transit_planets=transit_house_map,
+                title="Natal (White) & Transits (T:)"
+            )
+            st.pyplot(fig, use_container_width=True)
+
+        with col_data:
+            st.markdown("### 📊 Planetary Positions")
+            tab1, tab2 = st.tabs(["Natal Positions", "Current Transits"])
+            with tab1:
+                st.dataframe(natal_df, use_container_width=True, height=350)
+            with tab2:
+                st.dataframe(transit_df, use_container_width=True, height=350)
