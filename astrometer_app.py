@@ -552,54 +552,62 @@ else:
                 st.error(f"Execution Error: {str(e)}")
 
     # ---------- NORTH INDIAN KUNDLI CHART VIEW ----------
-    # Reset index if planet names are stored as the DataFrame index
-    if "planet" not in natal_df.columns:
-        natal_df_clean = natal_df.reset_index().rename(columns={"index": "planet"})
-    else:
-        natal_df_clean = natal_df.copy()
-    
-    if "planet" not in transit_df.columns:
-        transit_df_clean = transit_df.reset_index().rename(columns={"index": "planet"})
-    else:
-        transit_df_clean = transit_df.copy()
-    
-    # Find Ascendant / Lagna name variant ('Asc', 'Lagna', or 'ASC')
-    asc_row = natal_df_clean[natal_df_clean['planet'].astype(str).str.lower().isin(['asc', 'lagna', 'ascendant'])]
-    
-    if not asc_row.empty:
-        asc_deg = asc_row['longitude'].values[0]
-    else:
-        # Default fallback to 0 if Ascendant is missing
-        asc_deg = 0.0
-    
-    # Extract planet longitudes dict
-    natal_longs = dict(zip(natal_df_clean['planet'], natal_df_clean['longitude']))
-    transit_longs = dict(zip(transit_df_clean['planet'], transit_df_clean['longitude']))
-    
-    # Remove Ascendant key before house mapping
-    for k in ['Asc', 'Lagna', 'ASC', 'Ascendant']:
-        natal_longs.pop(k, None)
-        transit_longs.pop(k, None)
+    if st.session_state.view == "charts":
+        if st.session_state.last_result is None:
+            st.warning("⚠️ No planetary data computed yet. Please select or create a profile on the Intelligence Dashboard and click 'Align Planetary Matrix' first.")
+        else:
+            result = st.session_state.last_result
 
-        # Convert to house relative mappings
-        natal_house_map = map_planets_to_houses(asc_deg, natal_longs)
-        transit_house_map = map_planets_to_houses(asc_deg, transit_longs)
+            natal_df = result["natal_df"]
+            transit_df = result["transit_df"]
 
-        col_chart, col_data = st.columns([1.2, 1])
+            # Safely handle Index vs. Column named 'planet'
+            if "planet" not in natal_df.columns:
+                natal_df_clean = natal_df.reset_index().rename(columns={"index": "planet"})
+            else:
+                natal_df_clean = natal_df.copy()
 
-        with col_chart:
-            st.markdown("### 🔮 Kundli Chart (North Indian)")
-            fig = draw_north_indian_chart(
-                natal_planets=natal_house_map,
-                transit_planets=transit_house_map,
-                title="Natal (White) & Transits (T:)"
-            )
-            st.pyplot(fig, use_container_width=True)
+            if "planet" not in transit_df.columns:
+                transit_df_clean = transit_df.reset_index().rename(columns={"index": "planet"})
+            else:
+                transit_df_clean = transit_df.copy()
 
-        with col_data:
-            st.markdown("### 📊 Planetary Positions")
-            tab1, tab2 = st.tabs(["Natal Positions", "Current Transits"])
-            with tab1:
-                st.dataframe(natal_df, use_container_width=True, height=350)
-            with tab2:
-                st.dataframe(transit_df, use_container_width=True, height=350)
+            # Locate Ascendant/Lagna row flexibly
+            asc_row = natal_df_clean[natal_df_clean['planet'].astype(str).str.lower().isin(['asc', 'lagna', 'ascendant'])]
+
+            if not asc_row.empty:
+                asc_deg = asc_row['longitude'].values[0]
+            else:
+                asc_deg = 0.0
+
+            # Extract planet longitudes dictionary
+            natal_longs = dict(zip(natal_df_clean['planet'], natal_df_clean['longitude']))
+            transit_longs = dict(zip(transit_df_clean['planet'], transit_df_clean['longitude']))
+
+            # Clean out Ascendant variations before house mapping
+            for k in ['Asc', 'Lagna', 'ASC', 'Ascendant']:
+                natal_longs.pop(k, None)
+                transit_longs.pop(k, None)
+
+            # Convert longitudes to house maps
+            natal_house_map = map_planets_to_houses(asc_deg, natal_longs)
+            transit_house_map = map_planets_to_houses(asc_deg, transit_longs)
+
+            col_chart, col_data = st.columns([1.2, 1])
+
+            with col_chart:
+                st.markdown("### 🔮 Kundli Chart (North Indian)")
+                fig = draw_north_indian_chart(
+                    natal_planets=natal_house_map,
+                    transit_planets=transit_house_map,
+                    title="Natal (White) & Transits (T:)"
+                )
+                st.pyplot(fig, use_container_width=True)
+
+            with col_data:
+                st.markdown("### 📊 Planetary Positions")
+                tab1, tab2 = st.tabs(["Natal Positions", "Current Transits"])
+                with tab1:
+                    st.dataframe(natal_df, use_container_width=True, height=350)
+                with tab2:
+                    st.dataframe(transit_df, use_container_width=True, height=350)
