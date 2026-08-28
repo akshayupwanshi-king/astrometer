@@ -552,21 +552,34 @@ else:
                 st.error(f"Execution Error: {str(e)}")
 
     # ---------- NORTH INDIAN KUNDLI CHART VIEW ----------
-    if st.session_state.last_result and st.session_state.view == "charts":
-        result = st.session_state.last_result
-
-        natal_df = result["natal_df"]
-        transit_df = result["transit_df"]
-
-        # Extract Ascendant degree
-        asc_deg = natal_df.loc[natal_df['planet'] == 'Asc', 'longitude'].values[0]
-
-        # Extract planet longitudes
-        natal_longs = dict(zip(natal_df['planet'], natal_df['longitude']))
-        transit_longs = dict(zip(transit_df['planet'], transit_df['longitude']))
-
-        natal_longs.pop('Asc', None)
-        transit_longs.pop('Asc', None)
+    # Reset index if planet names are stored as the DataFrame index
+    if "planet" not in natal_df.columns:
+        natal_df_clean = natal_df.reset_index().rename(columns={"index": "planet"})
+    else:
+        natal_df_clean = natal_df.copy()
+    
+    if "planet" not in transit_df.columns:
+        transit_df_clean = transit_df.reset_index().rename(columns={"index": "planet"})
+    else:
+        transit_df_clean = transit_df.copy()
+    
+    # Find Ascendant / Lagna name variant ('Asc', 'Lagna', or 'ASC')
+    asc_row = natal_df_clean[natal_df_clean['planet'].astype(str).str.lower().isin(['asc', 'lagna', 'ascendant'])]
+    
+    if not asc_row.empty:
+        asc_deg = asc_row['longitude'].values[0]
+    else:
+        # Default fallback to 0 if Ascendant is missing
+        asc_deg = 0.0
+    
+    # Extract planet longitudes dict
+    natal_longs = dict(zip(natal_df_clean['planet'], natal_df_clean['longitude']))
+    transit_longs = dict(zip(transit_df_clean['planet'], transit_df_clean['longitude']))
+    
+    # Remove Ascendant key before house mapping
+    for k in ['Asc', 'Lagna', 'ASC', 'Ascendant']:
+        natal_longs.pop(k, None)
+        transit_longs.pop(k, None)
 
         # Convert to house relative mappings
         natal_house_map = map_planets_to_houses(asc_deg, natal_longs)
