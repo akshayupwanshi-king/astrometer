@@ -17,84 +17,93 @@ from astro_engine import (
 
 # ====================== PAGE CONFIG ======================
 st.set_page_config(
-    page_title="AstroMeter Pro",
-    page_icon="🌠",
+    page_title="AstroMeter Pro • Celestial Intelligence",
+    page_icon="✨",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ====================== MODERN GLASSMORPHISM THEME ======================
+# ====================== NEBULA DESIGN SYSTEM ======================
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+
     :root {
-        --bg-gradient: radial-gradient(circle at top right, #1E1B4B, #0F172A, #020617);
-        --accent-purple: #8B5CF6;
-        --accent-glow: rgba(139, 92, 246, 0.25);
-        --glass-bg: rgba(30, 41, 59, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.08);
-        --text-primary: #F8FAFC;
-        --text-secondary: #94A3B8;
+        --bg-dark: #070913;
+        --card-bg: rgba(18, 22, 41, 0.75);
+        --card-border: rgba(168, 85, 247, 0.15);
+        --purple-glow: #A855F7;
+        --cyan-glow: #06B6D4;
+        --text-bright: #F8FAFC;
+        --text-muted: #94A3B8;
     }
 
     .stApp {
-        background: var(--bg-gradient);
-        color: var(--text-primary);
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background-color: var(--bg-dark);
+        background-image: 
+            radial-gradient(at 0% 0%, rgba(168, 85, 247, 0.12) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.1) 0px, transparent 50%);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        color: var(--text-bright);
     }
 
-    /* Modern Glass Cards */
-    div[data-testid="stExpander"], .custom-card {
-        background: var(--glass-bg) !important;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--glass-border) !important;
-        border-radius: 16px !important;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    /* Modern Glass Card Components */
+    .astro-card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        margin-bottom: 20px;
     }
 
-    /* Headings */
-    h1, h2, h3 {
-        color: var(--text-primary) !important;
-        font-weight: 700 !important;
-        letter-spacing: -0.02em !important;
-    }
-    
-    .stApp h1 {
-        background: linear-gradient(135deg, #C084FC 0%, #E879F9 100%);
+    .astro-stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #F8FAFC 0%, #A855F7 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
 
+    .astro-stat-label {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+
     /* Buttons */
     .stButton > button {
-        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%) !important;
-        color: white !important;
+        background: linear-gradient(135deg, #A855F7 0%, #6366F1 100%) !important;
+        color: #FFFFFF !important;
         border: none !important;
-        border-radius: 10px !important;
-        padding: 0.6rem 1.2rem !important;
+        border-radius: 12px !important;
+        padding: 0.75rem 1.5rem !important;
         font-weight: 600 !important;
-        box-shadow: 0 4px 14px 0 var(--accent-glow) !important;
-        transition: all 0.2s ease-in-out !important;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
     .stButton > button:hover {
-        transform: translateY(-1px) !important;
-        box-shadow: 0 6px 20px 0 rgba(139, 92, 246, 0.4) !important;
+        transform: translateY(-2px) scale(1.01) !important;
+        box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5) !important;
     }
 
-    /* Inputs */
+    /* Form Fields */
     .stTextInput input, .stNumberInput input, .stSelectbox > div > div {
-        background: rgba(15, 23, 42, 0.6) !important;
-        border: 1px solid var(--glass-border) !important;
-        border-radius: 8px !important;
+        background: rgba(11, 15, 30, 0.8) !important;
+        border: 1px solid var(--card-border) !important;
+        border-radius: 12px !important;
         color: #F8FAFC !important;
+        padding: 10px 14px !important;
     }
 
-    /* Sidebar */
     section[data-testid="stSidebar"] {
-        background: rgba(15, 23, 42, 0.85) !important;
-        backdrop-filter: blur(16px);
-        border-right: 1px solid var(--glass-border);
+        background: rgba(7, 9, 19, 0.9) !important;
+        border-right: 1px solid var(--card-border);
     }
 
     footer { visibility: hidden; }
@@ -117,7 +126,6 @@ API_KEY = st.secrets["api"]["key"]
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Restore session smoothly
 if "access_token" in st.session_state and "refresh_token" in st.session_state:
     try:
         supabase.auth.set_session(
@@ -185,119 +193,137 @@ if "view" not in st.session_state:
 if "last_result" not in st.session_state:
     st.session_state.last_result = None
 
-# ====================== APPLICATION HEADER ======================
-st.markdown("<h1 style='text-align:center; margin-bottom: 0px;'>🌠 AstroMeter Pro</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#94A3B8; font-size: 1.1rem; margin-bottom: 30px;'>Cosmic Intelligence Engine</p>", unsafe_allow_html=True)
+# ====================== HEADER ======================
+st.markdown("""
+<div style="text-align: center; padding: 20px 0 10px 0;">
+    <h1 style="font-size: 2.8rem; font-weight: 800; margin-bottom: 0px; background: linear-gradient(135deg, #A855F7 0%, #06B6D4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        ASTROMETER PRO
+    </h1>
+    <p style="color: #94A3B8; font-size: 1rem; letter-spacing: 2px; font-weight: 600;">
+        CELESTIAL REAL-TIME INTELLIGENCE
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
-# ====================== AUTHENTICATION VIEW ======================
+# ====================== LOGIN VIEW ======================
 if not st.session_state.logged_in:
-    _, col2, _ = st.columns([1, 1.2, 1])
-    with col2:
-        tab1, tab2 = st.tabs(["✦ Sign In", "✦ Create Account"])
+    _, col, _ = st.columns([1, 1.2, 1])
+    with col:
+        st.markdown('<div class="astro-card">', unsafe_allow_html=True)
+        tab1, tab2 = st.tabs(["✦ Sign In", "✦ Register"])
 
         with tab1:
             email = st.text_input("Email", key="login_email")
             password = st.text_input("Password", type="password", key="login_pass")
-            if st.button("Enter the Cosmos", type="primary", use_container_width=True):
+            if st.button("Enter Cosmos", type="primary", use_container_width=True):
                 res = sign_in(email, password)
                 if res and res.user:
                     st.session_state.user = res.user
                     st.session_state.logged_in = True
-                    st.success("Authenticated successfully.")
-                    time.sleep(0.5)
                     st.rerun()
 
         with tab2:
             email = st.text_input("Email", key="signup_email")
             password = st.text_input("Password", type="password", key="signup_pass")
             password2 = st.text_input("Confirm Password", type="password", key="signup_pass2")
-            if st.button("Begin Your Journey", use_container_width=True):
-                if password != password2:
-                    st.error("Passwords do not match.")
-                elif len(password) < 6:
-                    st.error("Password must be at least 6 characters.")
-                else:
+            if st.button("Create Account", use_container_width=True):
+                if password == password2 and len(password) >= 6:
                     res = sign_up(email, password)
                     if res and res.user:
-                        st.success("Account created! Proceed to Sign In.")
-                    else:
-                        st.error("Failed to create account.")
+                        st.success("Account ready. Sign in to continue.")
+                else:
+                    st.error("Check password parameters.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# ====================== MAIN DASHBOARD ======================
+# ====================== DASHBOARD VIEW ======================
 else:
     user = st.session_state.user
     user_id = user.id
 
-    # Sidebar Navigation
     with st.sidebar:
-        st.markdown("### 🪐 Workspace")
-        if st.button("🎯 Luck Meter", use_container_width=True):
+        st.markdown("### 🪐 Navigation")
+        if st.button("🎯 Intelligence Dashboard", use_container_width=True):
             st.session_state.view = "meter"
             st.rerun()
-        if st.button("📜 Planetary Positions", use_container_width=True):
+        if st.button("📜 Planetary Matrices", use_container_width=True):
             st.session_state.view = "charts"
             st.rerun()
-        
         st.markdown("---")
         st.caption("Active Session")
         st.markdown(f"**{user.email}**")
         if st.button("Sign Out", use_container_width=True):
             sign_out()
 
-    # ---------- METER VISUALIZATION ----------
+    # ---------- METRICS & METER DISPLAY ----------
     if st.session_state.last_result and st.session_state.view == "meter":
         result = st.session_state.last_result
         score = result["score"]
         current_maha = result["current_maha"]
 
         if score >= 67:
-            zone, zone_color, message = "High", "#10B981", "The cosmos favors bold action"
+            zone, zone_color = "Optimal Alignment", "#10B981"
         elif score >= 34:
-            zone, zone_color, message = "Moderate", "#F59E0B", "Steady energy — move with care"
+            zone, zone_color = "Balanced Energy", "#F59E0B"
         else:
-            zone, zone_color, message = "Low", "#EF4444", "The stars advise patience"
+            zone, zone_color = "Restorative Phase", "#EF4444"
 
         final_angle = (score / 100) * 180 - 90
 
+        # Card-based summary metrics above the gauge
+        m_col1, m_col2, m_col3 = st.columns(3)
+        with m_col1:
+            st.markdown(f"""
+            <div class="astro-card">
+                <div class="astro-stat-label">Jupiter House</div>
+                <div class="astro-stat-value">{result['jup_h']}th</div>
+                <div style="font-size:0.75rem; color:#94A3B8;">From Natal Moon</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with m_col2:
+            st.markdown(f"""
+            <div class="astro-card">
+                <div class="astro-stat-label">Venus House</div>
+                <div class="astro-stat-value">{result['ven_h']}th</div>
+                <div style="font-size:0.75rem; color:#94A3B8;">From Natal Moon</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with m_col3:
+            st.markdown(f"""
+            <div class="astro-card">
+                <div class="astro-stat-label">Moon Position</div>
+                <div class="astro-stat-value">{result['moon_h']}th</div>
+                <div style="font-size:0.75rem; color:#94A3B8;">From Ascendant</div>
+            </div>
+            """, unsafe_allow_html=True)
+
         meter_html = f"""
-        <div style="display:flex; flex-direction:column; align-items:center; font-family: system-ui, sans-serif;">
-          <div style="font-size:12px; font-weight: 700; color:#8B5CF6; letter-spacing: 2px; margin-bottom: 8px;">
+        <div style="display:flex; flex-direction:column; align-items:center; font-family:'Plus Jakarta Sans', sans-serif;">
+          <div style="font-size:12px; font-weight: 700; color:#A855F7; letter-spacing: 3px; margin-bottom: 8px;">
             CURRENT MAHA-DASHA • {current_maha.upper()}
           </div>
 
-          <div style="position:relative; width:300px; height:160px;">
-            <svg width="300" height="160" viewBox="0 0 320 180">
-              <path d="M 30 160 A 130 130 0 0 1 290 160" fill="none" stroke="#1E293B" stroke-width="20" stroke-linecap="round"/>
-              <path d="M 30 160 A 130 130 0 0 1 110 48" fill="none" stroke="#EF4444" stroke-width="20" stroke-linecap="round"/>
-              <path d="M 110 48 A 130 130 0 0 1 210 48" fill="none" stroke="#F59E0B" stroke-width="20" stroke-linecap="round"/>
-              <path d="M 210 48 A 130 130 0 0 1 290 160" fill="none" stroke="#10B981" stroke-width="20" stroke-linecap="round"/>
+          <div style="position:relative; width:300px; height:150px;">
+            <svg width="300" height="150" viewBox="0 0 320 180">
+              <path d="M 30 160 A 130 130 0 0 1 290 160" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="22" stroke-linecap="round"/>
+              <path d="M 30 160 A 130 130 0 0 1 110 48" fill="none" stroke="#EF4444" stroke-width="22" stroke-linecap="round"/>
+              <path d="M 110 48 A 130 130 0 0 1 210 48" fill="none" stroke="#F59E0B" stroke-width="22" stroke-linecap="round"/>
+              <path d="M 210 48 A 130 130 0 0 1 290 160" fill="none" stroke="#10B981" stroke-width="22" stroke-linecap="round"/>
             </svg>
 
             <div id="needle" style="
               position:absolute; bottom:18px; left:50%; width:4px; height:110px;
               background: #F8FAFC; transform-origin: bottom center;
               transform: translateX(-50%) rotate(-90deg); border-radius: 4px; z-index: 10;
-              box-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
-            "></div>
-
-            <div style="
-              position:absolute; bottom:10px; left:50%; transform: translateX(-50%);
-              width:20px; height:20px; background: #F8FAFC; border-radius: 50%;
-              border: 3px solid #0F172A; z-index: 20;
+              box-shadow: 0 0 15px rgba(168, 85, 247, 0.8);
             "></div>
           </div>
 
           <div id="score" style="
-            font-size: 64px; font-weight: 800; color: {zone_color};
-            margin-top: -10px; line-height: 1;
+            font-size: 72px; font-weight: 800; color: {zone_color}; line-height:1; margin-top:-10px;
           ">0</div>
 
-          <div style="font-size: 16px; font-weight: 700; color: {zone_color}; letter-spacing: 3px; margin-top: 4px;">
+          <div style="font-size: 15px; font-weight: 700; color: {zone_color}; letter-spacing: 2px; margin-top: 6px;">
             {zone.upper()}
-          </div>
-
-          <div style="margin-top: 8px; font-size: 14px; color: #94A3B8; text-align: center;">
-            {message}
           </div>
         </div>
 
@@ -306,12 +332,12 @@ else:
           const scoreEl = document.getElementById('score');
           
           setTimeout(() => {{
-            needle.style.transition = 'transform 1.5s cubic-bezier(0.2, 0.8, 0.2, 1)';
+            needle.style.transition = 'transform 1.8s cubic-bezier(0.16, 1, 0.3, 1)';
             needle.style.transform = `translateX(-50%) rotate({final_angle}deg)`;
           }}, 50);
 
           let current = 0;
-          const duration = 1500;
+          const duration = 1800;
           const start = performance.now();
 
           function animateScore(time) {{
@@ -324,9 +350,7 @@ else:
           requestAnimationFrame(animateScore);
         </script>
         """
-        components.html(meter_html, height=320)
-        st.caption(f"Jupiter → {result['jup_h']}th from Moon  •  Venus → {result['ven_h']}th from Moon  •  Moon → {result['moon_h']}th from Ascendant")
-        st.markdown("---")
+        components.html(meter_html, height=310)
 
     # ---------- PROFILE MANAGEMENT ----------
     profiles = get_user_profiles(user_id)
@@ -334,49 +358,40 @@ else:
 
     if profiles:
         profile_names = [f"{p['name']} ({p['year']}-{p['month']:02d}-{p['day']:02d})" for p in profiles]
-        selected = st.selectbox("Active Profile", profile_names)
+        selected = st.selectbox("Active Subject Profile", profile_names)
         selected_profile = profiles[profile_names.index(selected)]
 
         col_edit, col_del = st.columns(2)
         with col_edit:
-            if st.button("✏️ Edit Selected Profile", use_container_width=True):
+            if st.button("✏️ Edit Profile Parameters", use_container_width=True):
                 st.session_state.edit_profile = selected_profile
         with col_del:
-            if st.button("🗑️ Delete Selected Profile", use_container_width=True):
+            if st.button("🗑️ Delete Profile", use_container_width=True):
                 supabase.table("birth_profiles").delete().eq("id", selected_profile["id"]).execute()
-                if "last_result" in st.session_state:
-                    del st.session_state.last_result
-                st.success("Profile removed.")
-                time.sleep(0.5)
+                st.session_state.pop("last_result", None)
                 st.rerun()
-    else:
-        st.info("No birth profiles found. Add one below to begin.")
 
-    # ---------- ADD / EDIT PROFILE EXPANDER ----------
+    # ---------- PROFILE ADD/EDIT FORM ----------
     edit_mode = "edit_profile" in st.session_state and st.session_state.edit_profile is not None
     
-    with st.expander("➕ Create / Modify Birth Profile", expanded=edit_mode or not profiles):
-        city_query = st.text_input("Search Location", placeholder="Enter city name (e.g. London, Tokyo)...", key="city_search")
-
+    with st.expander("➕ Configure Birth Chart Data", expanded=edit_mode or not profiles):
+        city_query = st.text_input("Search Birth City", placeholder="Type city name...", key="city_search")
         selected_city = None
         lat = lon = None
 
         if city_query and len(city_query.strip()) >= 2:
             mask = cities_df["city_ascii"].str.contains(city_query.strip(), case=False, na=False)
-            matches = cities_df[mask].head(10)
+            matches = cities_df[mask].head(8)
 
             if not matches.empty:
-                chosen = st.selectbox("Select matching city", matches["display"].tolist(), key="city_choice")
+                chosen = st.selectbox("Matching Location", matches["display"].tolist(), key="city_choice")
                 selected_city = matches[matches["display"] == chosen].iloc[0]
                 lat, lon = float(selected_city["lat"]), float(selected_city["lng"])
-                st.caption(f"Coordinates: `{lat:.4f}, {lon:.4f}`")
-            else:
-                st.warning("No location matches found.")
 
         with st.form("profile_form"):
             default = st.session_state.get("edit_profile", {})
 
-            name = st.text_input("Full Name", value=default.get("name", ""))
+            name = st.text_input("Subject Name", value=default.get("name", ""))
             c1, c2, c3 = st.columns(3)
             year = c1.number_input("Year", 1900, 2100, value=default.get("year", 1996))
             month = c2.number_input("Month", 1, 12, value=default.get("month", 9))
@@ -391,14 +406,10 @@ else:
                 lat = default.get("latitude")
                 lon = default.get("longitude")
 
-            submitted = st.form_submit_button("Save Profile Data", type="primary", use_container_width=True)
+            submitted = st.form_submit_button("Save Profile Matrix", type="primary", use_container_width=True)
 
             if submitted:
-                if not name:
-                    st.error("Name is required.")
-                elif lat is None or lon is None:
-                    st.error("Select a valid city location.")
-                else:
+                if name and lat is not None and lon is not None:
                     data = {
                         "name": name,
                         "year": int(year), "month": int(month), "day": int(day),
@@ -410,19 +421,15 @@ else:
                     if edit_mode:
                         supabase.table("birth_profiles").update(data).eq("id", default["id"]).execute()
                         supabase.table("natal_cache").delete().eq("profile_id", default["id"]).execute()
-                        st.session_state.pop("last_result", None)
                         st.session_state.pop("edit_profile", None)
-                        st.success("Profile updated.")
                     else:
                         save_profile(user_id, data)
-                        st.success("Profile saved.")
 
-                    time.sleep(0.5)
                     st.rerun()
 
-    # ---------- CALCULATION ENGINE ----------
-    if selected_profile and st.button("🔮 Calculate Luck Metrics", type="primary", use_container_width=True):
-        with st.spinner("Processing planetary transits..."):
+    # ---------- ENGINE COMPUTE BUTTON ----------
+    if selected_profile and st.button("🔮 Align Planetary Matrix", type="primary", use_container_width=True):
+        with st.spinner("Computing real-time transits..."):
             try:
                 p = selected_profile
                 tz_str = get_timezone(p["latitude"], p["longitude"])
@@ -471,16 +478,15 @@ else:
                 st.rerun()
 
             except Exception as e:
-                st.error(f"Calculation Error: {str(e)}")
+                st.error(f"Execution Error: {str(e)}")
 
     # ---------- CHARTS VIEW ----------
     if st.session_state.last_result and st.session_state.view == "charts":
         result = st.session_state.last_result
-        st.markdown("### 📜 Planetary Positions")
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown("#### Natal Positions")
+            st.markdown("#### Natal Chart Matrix")
             st.dataframe(result["natal_df"], use_container_width=True, height=400)
         with col2:
-            st.markdown("#### Live Transits")
+            st.markdown("#### Active Transit Matrix")
             st.dataframe(result["transit_df"], use_container_width=True, height=400)
