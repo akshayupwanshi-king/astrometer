@@ -134,9 +134,9 @@ def build_house_map_from_df(df):
             
     return house_map
 
-def draw_north_indian_chart(natal_planets, transit_planets=None, title="Kundli Chart", transit_color="#06B6D4"):
+def draw_north_indian_chart(natal_planets, transit_planets=None, title="Kundli Chart"):
     """
-    Draws a North Indian Diamond/Square Kundli using Matplotlib with distinct text colors for Natal vs Transits.
+    Draws a North Indian Diamond/Square Kundli using Matplotlib.
     """
     fig, ax = plt.subplots(figsize=(7, 7), facecolor='#0D0F1D')
     ax.set_facecolor('#0D0F1D')
@@ -152,7 +152,7 @@ def draw_north_indian_chart(natal_planets, transit_planets=None, title="Kundli C
         ((5, 0), (10, 5)), ((10, 5), (5, 10))
     ]
     for line in lines:
-        ax.plot([line[0][0], line[1][0]], [line[0][0], line[1][1]], color='#6366F1', linewidth=1.5)
+        ax.plot([line[0][0], line[1][0]], [line[0][1], line[1][1]], color='#6366F1', linewidth=1.5)
 
     # House Center Coordinates
     house_positions = {
@@ -162,38 +162,38 @@ def draw_north_indian_chart(natal_planets, transit_planets=None, title="Kundli C
         10: (7.5, 5.0), 11: (9.0, 7.5), 12: (7.5, 9.0)
     }
 
+    # Locate this section inside draw_north_indian_chart():
     for house in range(1, 13):
         center = house_positions[house]
         n_list = natal_planets.get(house, [])
         t_list = transit_planets.get(house, []) if transit_planets else []
 
-        if not n_list and not t_list:
-            continue
-
-        cx, cy = center[0], center[1]
-
-        # Draw box background when planets exist in house
-        ax.text(
-            cx, cy, " ",
-            bbox=dict(boxstyle='round,pad=0.5', facecolor='#1E1B4B', alpha=0.85, edgecolor='#A855F7')
-        )
-
-        # 1. Render Natal Planets (White Text)
+        # 1. Draw Natal Planets (White Text)
         if n_list:
-            y_offset = 0.15 if t_list else 0.0
             ax.text(
-                cx, cy + y_offset, " ".join(n_list),
-                color='#F8FAFC', fontsize=9, fontweight='bold',
-                ha='center', va='center'
+                center[0], center[1] + (0.35 if t_list else 0.0), " ".join(n_list),
+                color='#F8FAFC', fontsize=9, fontweight='bold',  # Natal Color (White)
+                ha='center', va='center',
+                bbox=dict(boxstyle='round,pad=0.2', facecolor='#1E1B4B', alpha=0.85, edgecolor='#A855F7')
             )
 
-        # 2. Render Transit Planets (Custom Transit Color)
+        # 2. Draw Transit Planets (Custom Color - e.g., Cyan #06B6D4)
         if t_list:
-            y_offset = -0.15 if n_list else 0.0
             ax.text(
-                cx, cy + y_offset, "T: " + " ".join(t_list),
-                color=transit_color, fontsize=8.5, fontweight='bold',
-                ha='center', va='center'
+                center[0], center[1] - (0.35 if n_list else 0.0), "T: " + " ".join(t_list),
+                color='#06B6D4', fontsize=8.5, fontweight='bold',  # <-- CHANGE TRANSIT COLOR HERE
+                ha='center', va='center',
+                bbox=dict(boxstyle='round,pad=0.2', facecolor='#0F172A', alpha=0.85, edgecolor='#06B6D4')
+            )
+
+        display_text = "\n".join(lines_str)
+
+        if display_text:
+            ax.text(
+                center[0], center[1], display_text,
+                color='#F8FAFC', fontsize=9, fontweight='bold',
+                ha='center', va='center',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='#1E1B4B', alpha=0.85, edgecolor='#A855F7')
             )
 
     ax.set_xlim(-0.5, 10.5)
