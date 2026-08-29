@@ -291,41 +291,38 @@ if not st.session_state.logged_in:
     _, col, _ = st.columns([1, 1.2, 1])
     with col:
         st.markdown('<div class="astro-card">', unsafe_allow_html=True)
-        tab1, tab2 = st.tabs(["✦ Sign In", "✦ Register"])
-        st.title("ASTROMETER PRO")
-    st.caption("CELESTIAL REAL-TIME INTELLIGENCE")
-    
-    # --- PUT ASTROMETER CONTAINER HERE ---
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown("""
-            <div style="background:#13172A; border:1px solid #312E81; padding:10px; border-radius:10px; text-align:center;">
-                <div style="color:#94A3B8; font-size:10px; font-weight:bold;">JUPITER HOUSE</div>
-                <div style="color:#38BDF8; font-size:18px; font-weight:bold;">6th</div>
-                <div style="color:#64748B; font-size:9px;">From Natal Moon</div>
-            </div>
-        """, unsafe_allow_dict=True)
-    
-    with col2:
-        st.markdown("""
-            <div style="background:#13172A; border:1px solid #312E81; padding:10px; border-radius:10px; text-align:center;">
-                <div style="color:#94A3B8; font-size:10px; font-weight:bold;">VENUS HOUSE</div>
-                <div style="color:#38BDF8; font-size:18px; font-weight:bold;">8th</div>
-                <div style="color:#64748B; font-size:9px;">From Natal Moon</div>
-            </div>
-        """, unsafe_allow_dict=True)
-    
-    with col3:
-        st.markdown("""
-            <div style="background:#13172A; border:1px solid #312E81; padding:10px; border-radius:10px; text-align:center;">
-                <div style="color:#94A3B8; font-size:10px; font-weight:bold;">MOON POSITION</div>
-                <div style="color:#38BDF8; font-size:18px; font-weight:bold;">6th</div>
-                <div style="color:#64748B; font-size:9px;">From Ascendant</div>
-            </div>
-        """, unsafe_allow_dict=True)
+        
+        # --- ASTROMETER METRIC CONTAINERS ---
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown("""
+                <div style="background:#13172A; border:1px solid #312E81; padding:10px; border-radius:10px; text-align:center;">
+                    <div style="color:#94A3B8; font-size:10px; font-weight:bold;">JUPITER HOUSE</div>
+                    <div style="color:#38BDF8; font-size:18px; font-weight:bold;">6th</div>
+                    <div style="color:#64748B; font-size:9px;">From Natal Moon</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+                <div style="background:#13172A; border:1px solid #312E81; padding:10px; border-radius:10px; text-align:center;">
+                    <div style="color:#94A3B8; font-size:10px; font-weight:bold;">VENUS HOUSE</div>
+                    <div style="color:#38BDF8; font-size:18px; font-weight:bold;">8th</div>
+                    <div style="color:#64748B; font-size:9px;">From Natal Moon</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown("""
+                <div style="background:#13172A; border:1px solid #312E81; padding:10px; border-radius:10px; text-align:center;">
+                    <div style="color:#94A3B8; font-size:10px; font-weight:bold;">MOON POSITION</div>
+                    <div style="color:#38BDF8; font-size:18px; font-weight:bold;">6th</div>
+                    <div style="color:#64748B; font-size:9px;">From Ascendant</div>
+                </div>
+            """, unsafe_allow_html=True)
 
-    # --- SIGN IN / REGISTER FORM STARTS HERE ---
-    tab1, tab2 = st.tabs(["✦ Sign In", "✦ Register"])
+        # --- SIGN IN / REGISTER TABS ---
+        tab1, tab2 = st.tabs(["✦ Sign In", "✦ Register"])
 
         with tab1:
             email = st.text_input("Email", key="login_email")
@@ -348,6 +345,7 @@ if not st.session_state.logged_in:
                         st.success("Account ready. Sign in to continue.")
                 else:
                     st.error("Check password parameters.")
+
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ====================== DASHBOARD VIEW ======================
