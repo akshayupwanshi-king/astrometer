@@ -290,33 +290,30 @@ st.markdown("""
 if not st.session_state.logged_in:
     _, col, _ = st.columns([1, 1.2, 1])
     
-        # --- SIGN IN / REGISTER TABS ---
-        tab1, tab2 = st.tabs(["✦ Sign In", "✦ Register"])
+    # --- SIGN IN / REGISTER TABS ---
+    tab1, tab2 = st.tabs(["✦ Sign In", "✦ Register"])
 
-        with tab1:
-            email = st.text_input("Email", key="login_email")
-            password = st.text_input("Password", type="password", key="login_pass")
-            if st.button("Enter Cosmos", type="primary", use_container_width=True):
-                res = sign_in(email, password)
+    with tab1:
+        email = st.text_input("Email", key="login_email")
+        password = st.text_input("Password", type="password", key="login_pass")
+        if st.button("Enter Cosmos", type="primary", use_container_width=True):
+            res = sign_in(email, password)
+            if res and res.user:
+                st.session_state.user = res.user
+                st.session_state.logged_in = True
+                st.rerun()
+
+    with tab2:
+        email = st.text_input("Email", key="signup_email")
+        password = st.text_input("Password", type="password", key="signup_pass")
+        password2 = st.text_input("Confirm Password", type="password", key="signup_pass2")
+        if st.button("Create Account", use_container_width=True):
+            if password == password2 and len(password) >= 6:
+                res = sign_up(email, password)
                 if res and res.user:
-                    st.session_state.user = res.user
-                    st.session_state.logged_in = True
-                    st.rerun()
-
-        with tab2:
-            email = st.text_input("Email", key="signup_email")
-            password = st.text_input("Password", type="password", key="signup_pass")
-            password2 = st.text_input("Confirm Password", type="password", key="signup_pass2")
-            if st.button("Create Account", use_container_width=True):
-                if password == password2 and len(password) >= 6:
-                    res = sign_up(email, password)
-                    if res and res.user:
-                        st.success("Account ready. Sign in to continue.")
-                else:
-                    st.error("Check password parameters.")
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
+                    st.success("Account ready. Sign in to continue.")
+            else:
+                st.error("Check password parameters.")
 # ====================== DASHBOARD VIEW ======================
 else:
     user = st.session_state.user
