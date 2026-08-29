@@ -289,38 +289,7 @@ st.markdown("""
 # ====================== LOGIN VIEW ======================
 if not st.session_state.logged_in:
     _, col, _ = st.columns([1, 1.2, 1])
-    with col:
-        st.markdown('<div class="astro-card">', unsafe_allow_html=True)
-        
-        # --- ASTROMETER METRIC CONTAINERS ---
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.markdown("""
-                <div style="background:#13172A; border:1px solid #312E81; padding:10px; border-radius:10px; text-align:center;">
-                    <div style="color:#94A3B8; font-size:10px; font-weight:bold;">JUPITER HOUSE</div>
-                    <div style="color:#38BDF8; font-size:18px; font-weight:bold;">6th</div>
-                    <div style="color:#64748B; font-size:9px;">From Natal Moon</div>
-                </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown("""
-                <div style="background:#13172A; border:1px solid #312E81; padding:10px; border-radius:10px; text-align:center;">
-                    <div style="color:#94A3B8; font-size:10px; font-weight:bold;">VENUS HOUSE</div>
-                    <div style="color:#38BDF8; font-size:18px; font-weight:bold;">8th</div>
-                    <div style="color:#64748B; font-size:9px;">From Natal Moon</div>
-                </div>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            st.markdown("""
-                <div style="background:#13172A; border:1px solid #312E81; padding:10px; border-radius:10px; text-align:center;">
-                    <div style="color:#94A3B8; font-size:10px; font-weight:bold;">MOON POSITION</div>
-                    <div style="color:#38BDF8; font-size:18px; font-weight:bold;">6th</div>
-                    <div style="color:#64748B; font-size:9px;">From Ascendant</div>
-                </div>
-            """, unsafe_allow_html=True)
-
+    
         # --- SIGN IN / REGISTER TABS ---
         tab1, tab2 = st.tabs(["✦ Sign In", "✦ Register"])
 
@@ -381,32 +350,6 @@ else:
             zone, zone_color = "Restorative Phase", "#EF4444"
 
         final_angle = (score / 100) * 180 - 90
-
-        m_col1, m_col2, m_col3 = st.columns(3)
-        with m_col1:
-            st.markdown(f"""
-            <div class="astro-card">
-                <div class="astro-stat-label">Jupiter House</div>
-                <div class="astro-stat-value">{result['jup_h']}th</div>
-                <div style="font-size:0.75rem; color:#94A3B8;">From Natal Moon</div>
-            </div>
-            """, unsafe_allow_html=True)
-        with m_col2:
-            st.markdown(f"""
-            <div class="astro-card">
-                <div class="astro-stat-label">Venus House</div>
-                <div class="astro-stat-value">{result['ven_h']}th</div>
-                <div style="font-size:0.75rem; color:#94A3B8;">From Natal Moon</div>
-            </div>
-            """, unsafe_allow_html=True)
-        with m_col3:
-            st.markdown(f"""
-            <div class="astro-card">
-                <div class="astro-stat-label">Moon Position</div>
-                <div class="astro-stat-value">{result['moon_h']}th</div>
-                <div style="font-size:0.75rem; color:#94A3B8;">From Ascendant</div>
-            </div>
-            """, unsafe_allow_html=True)
 
         meter_html = f"""
         <div style="display:flex; flex-direction:column; align-items:center; font-family:'Plus Jakarta Sans', sans-serif;">
